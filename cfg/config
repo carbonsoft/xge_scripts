@@ -1,0 +1,34 @@
+#!/bin/bash
+
+declare -A app
+app['widget']='menu "Настройки маршрутизатора"'
+app['name']='Carbon XGE Router 5'
+app['appname']='xge'
+app['path']='/app/xge'
+app['ico']='icon-chart'
+app['color']='bg-color-blue'
+
+declare -A network
+network['widget']='menu "Настройка сети" "Настройка сети"'
+
+#if 0
+network['if0.name']='Внешний интерфейс'
+network['if0.ip']=''
+network['if0.gate']=''
+network['if0.device']='dummy0'
+network['if0.disabled']='1'
+network['if0.type']='ethernet'
+network['if0.role']='External'
+network['if0.vlan']='0'
+network['if0.brd']=''
+network['if0.tag']=''
+network['api.ip.widget']='inputbox "IP адреса машин работающих через API" "По умолчанию - пусто"'
+network['api.ip']=''
+
+declare -A ctl
+ctl['start']='/service start'
+ctl['stop']='/service stop'
+
+declare -A mount
+mount['proc']='-t proc none /app/xge/proc'
+mount['dev']='-t devtmpfs none /app/xge/dev'
