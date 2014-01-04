@@ -1,0 +1,16 @@
+#!/bin/bash
+
+start() {
+	/genconfig
+}
+
+stop() {
+	return 0
+}
+
+restart() {
+	stop
+	start
+}
+
+$1
