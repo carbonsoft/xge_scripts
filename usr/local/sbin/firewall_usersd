@@ -1,0 +1,15 @@
+#!/bin/bash
+
+config=/var/lib/users.dat
+
+start() {
+	while read ip allow snat_ip speed; do
+		[ -n "$ip" ] || continue
+		[[ "$ip" == '#'* ]] && continue
+		[ "$allow" = '1' ] && ipset add ALLOW_FORWARD $ip 
+		[ "$allow" = '0' ] && ipset add DROP_FORWARD $ip
+	done < $config
+	return 0
+}
+
+$1
