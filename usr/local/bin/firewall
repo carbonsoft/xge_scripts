@@ -56,9 +56,9 @@ make_tree()
 }
 
 create_connlimit() {
-	if [ "${srv[firewall.new_limit_l]}" != "" ]; then
+	if [ "${firewall['new_limit_l']}" != "" ]; then
 		# todo сделать по пользователям
-		limit=$((${srv[firewall.new_limit_l]}/8)) #делим на 8 классов соурсов и отдельно tcp udp
+		limit=$((${firewall['new_limit_l']}/8)) #делим на 8 классов соурсов и отдельно tcp udp
 		iptables -t mangle -N NEW_LIMIT_L_TCP
 		iptables -t mangle -F NEW_LIMIT_L_TCP
 		iptables -t mangle -N NEW_LIMIT_L_UDP
@@ -81,10 +81,10 @@ create_connlimit() {
 		iptables -t mangle -A NEW_LIMIT_L_UDP -j DROP                    
 	fi
 
-	if [ "${srv[firewall.new_limit_e]}" != "" ]; then
+	if [ "${firewall['new_limit_e']}" != "" ]; then
 		# todo сделать по пользователям
 		# limit=$((NET_NEW_LIMIT_E/8)) #делим на 8 классов соурсов и отдельно tcp udp
-		limit=$((${srv[firewall.new_limit_e]}/8)) #делим на 8 классов соурсов и отдельно tcp udp
+		limit=$((${firewall['new_limit_e']}/8)) #делим на 8 классов соурсов и отдельно tcp udp
 		iptables -t mangle -N NEW_LIMIT_E_TCP
 		iptables -t mangle -F NEW_LIMIT_E_TCP
 		iptables -t mangle -N NEW_LIMIT_E_UDP
