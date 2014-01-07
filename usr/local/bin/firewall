@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. /config
+. /cfg/config
 . /etc/init.d/functions
 # firewall that create base rules/sets
 if [ "$1" = 'debug' ]; then
@@ -12,6 +12,7 @@ fi
 config=/var/lib/users.dat
 usersd=/usr/local/sbin/firewall_usersd
 qos=/usr/local/bin/shaper.sh
+
 make_tree()
 {
 	local TABLE=$1
