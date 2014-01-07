@@ -1,6 +1,7 @@
 #!/bin/bash
 
 config=/var/lib/users.dat
+touch $config
 
 start() {
 	while read ip allow snat_ip speed; do
