@@ -1,29 +1,113 @@
 #!/bin/bash
 
 declare -A app
-app['widget']='menu "Настройки маршрутизатора"'
-app['name']='Carbon XGE Router 5'
 app['appname']='xge'
-app['path']='/app/xge'
-app['ico']='icon-chart'
 app['color']='bg-color-blue'
+app['db.pass']='hjedvtht'
+app['db.user']='KNL_USER'
+app['ico']='icon-chart'
+app['name']='Carbon XGE Router 5'
+app['path']='/app/xge'
+app['ppp-server.ip']='10.0.201.1'
+app['ppp-server.ip.widget']='ip "IP-адрес VPN-серверов"'
+app['widget']='menu "Настройки маршрутизатора"'
 
 declare -A network
 network['widget']='menu "Настройка сети" "Настройка сети"'
 
 #if 0
-network['if0.name']='Внешний интерфейс'
-network['if0.ip']=''
-network['if0.gate']=''
+network['if0.brd']=''
 network['if0.device']='dummy0'
 network['if0.disabled']='1'
-network['if0.type']='ethernet'
+network['if0.gate']=''
+network['if0.ip']=''
+network['if0.name']='Внешний интерфейс'
 network['if0.role']='External'
-network['if0.vlan']='0'
-network['if0.brd']=''
 network['if0.tag']=''
-network['api.ip.widget']='inputbox "IP адреса машин работающих через API" "По умолчанию - пусто"'
-network['api.ip']=''
+network['if0.type']='ethernet'
+network['if0.vlan']='0'
+
+declare -A pptpd
+pptpd['enabled']='1'
+pptpd['enabled.widget']='checkbox "Включить PPTP-сервер" "Включить PPTP-сервер"'
+pptpd['mppe.list']='"mppe-optional" "Опциональное шифрование" "Позволяет подключаться к серверу как с шифрованием, так и без" "nomppe" "Запрещать шифрование" "Позволяет подключаться к серверу только с отключенным шифрованием" "require-mppe" "Требовать шифрование" "Позволяет подключаться к серверу только с включенным шифрованием"'
+pptpd['mppe']='mppe-optional'
+pptpd['mppe.widget']='radiolist "Настройки шифрования PPTP" "Выбор типа шифрования PPTP, либо отказ от него"'
+pptpd['widget']='menu "Настройки PPTPD" ""'
+
+declare -A openl2tpd
+openl2tpd['widget']='menu "Настройки OpenL2TPD" ""'
+openl2tpd['enabled']='0'
+openl2tpd['enabled.widget']='checkbox "Включить OpenL2TP-сервер" "Включить OpenL2TP-сервер, экспериментально."'
+
+declare -A pppoe_server
+pppoe_server['widget']='menu "Настройки PPPoE-сервера" ""'
+pppoe_server['enabled']='1'
+pppoe_server['enabled.widget']='checkbox "Включить PPPoE-сервер" "Включить PPPoE-сервер"'
+pppoe_server['name']='IdecoAS'
+pppoe_server['name.widget']='inputbox "Имя концентратора" "Для абонентов - имя службы"'
+
+declare -A firewall
+firewall['enabled']='1'
+firewall['enabled.widget']='checkbox "Включить файрвол" ""'
+firewall['new_limit_l']='2000'
+firewall['new_limit_l.widget']='inputbox "Ограничить колво новых соед/сек из лок.сети" "Рекомендуется 500-1000"'
+firewall['new_limit_e']='2000'
+firewall['new_limit_e.widget']='inputbox "Ограничить колво новых соед/сек из Интернет" "Рекомендуется 500-1000"'
+
+declare -A remote_management
+remote_management['widget']='menu "Настройки управления маршрутизатором" "Пароль задаётся в настройках Radius"'
+remote_management['carbon_nasd.enabled.widget']='checkbox "Включить демон приёма команд от биллинга" "Без него XGE-Router не будет корректно работать"'
+remote_management['carbon_nasd.enabled']='1'
+
+declare -A nfusens
+nfusens['widget']='menu "Настройки сенсора netflow" ""'
+nfusens['enabled.widget']='checkbox "Включить nfusens" "Без него XGE-Router не будет корректно работать"'
+nfusens['enabled']='1'
+
+declare -A bind
+bind['widget']="Настройка DNS-сервера"
+bind['enabled']='1'
+bind['enabled.widget']='checkbox "Включить DNS сервер BIND" "Включить DNS сервер BIND"'
+
+declare -A quagga
+quagga['widget']='menu "Настройки Quagga BGP/OSPF/RIP" ""'
+quagga['hostname.widget']='inputbox "Hostname для Quagga" "Нужно для BGP, OSPF, RIP"'
+quagga['hostname']='Carbon'
+quagga['enabled.widget']='checkbox "Включить ROUTING-сервер" "Quagga (Zebra): BGP, OSPF, RIP"'
+quagga['enabled']='0'
+quagga['password.widget']='inputbox "Пароль для терминального доступа" "Если не задан - терминальный доступ будет запрещён"'
+quagga['password']=''
+quagga['password.widget']='inputbox "Пароль для терминального доступа" "Если не задан - терминальный доступ будет запрещён"'
+quagga['enable_password']=''
+quagga['enable_password.widget']='inputbox "Пароль для привилегированного доступа" "Если не задан - привелигерованный доступ будет запрещён"'
+quagga['ospf.enabled.widget']='checkbox "Включить поддержку OSPF" ""'
+quagga['ospf.enabled']='0'
+
+declare -A radclient
+radclient['widget']='menu "Настройки Radius" "Настройки подключения к биллингу (АСР / ААА-серверу)"'
+radclient['secret']='123'
+radclient['netflow_collector']='10.0.0.254:9996'
+radclient['netflow_collector.widget']='inputbox "Сервер сборки статистики" "Адрес netflow-коллектора: IP:PORT"'
+radclient['secret.widget']='inputbox "Radius-secret" "Секретный ключ для доступа к биллингу (АСР / ААА-серверу)"'
+radclient['authserver']='10.0.0.254:1812'
+radclient['authserver.widget']='inputbox "Сервер авторизации" "Сервер авторизации, формат: IP:PORT"'
+radclient['acctserver']='10.0.0.254:1813'
+radclient['acctserver.widget']='inputbox "Сервер аккаунтинга" "Сервер аккаунтинга, формат: IP:PORT"'
+radclient['nas_identifier']='10.0.0.10'
+radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-сервера" "Является идентификатором этого AS в настройках Radius-сервера биллинга"'
+
+declare -A help
+help['widget']='textbox "Справка" "/app/carbon_as/usr/share/softrouter"'
+
+declare -A reg
+reg['widget']='menu "Регистрация NAS-сервера" ""'
+reg['actcode']=''
+reg['actcode.widget']='inputbox "Код активации" ""'
+reg['regnumber']=''
+reg['regnumber.widget']='inputbox "Регистрационный номер" ""'
+reg['installcode']=''
+reg['installcode.widget']='inputbox "Код установки" ""'
 
 declare -A ctl
 ctl['start']='/service start'
