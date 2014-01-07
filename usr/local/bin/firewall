@@ -1,0 +1,181 @@
+#!/bin/bash
+
+. /config
+. /etc/init.d/functions
+# firewall that create base rules/sets
+if [ "$1" = 'debug' ]; then
+	debug=1
+	shift
+fi
+
+# ip | allow | nat | speed
+config=/var/lib/users.dat
+usersd=/usr/local/sbin/firewall_usersd
+qos=/usr/local/bin/shaper.sh
+make_tree()
+{
+	local TABLE=$1
+	local PARENT=$2
+	local PREFIX=$3
+	local DIRECT=$4
+	local am bm cm a depth levels
+	iptables(){
+		local tmp="$*"
+		tmp=${tmp//-t mangle/}
+		tmp=${tmp//-t filter/}
+		tmp=${tmp//-t nat/}
+		echo $tmp >> $iptables_file
+	}
+
+	#подготовим правила для iptables-restore
+	echo "*$TABLE" >>  $iptables_file
+
+	depth=4
+	levels=2 # not used now
+	am=$(( (2**depth)-1 ))
+	bm=$(( am << depth ))
+	a=$(( 2**depth ))
+	while ((a--)); do
+		av=$((a<<(depth*0)))
+		iptables -t ${TABLE} -N ${PREFIX}_${a}
+		iptables -t ${TABLE} -A $PARENT               -$DIRECT 0.0.$((av/256)).$((av%256))/0.0.$((am/256)).$((am%256)) -j ${PREFIX}_${a}
+
+		b=$(( 2**depth ))
+		while ((b--)); do
+			bv=$((b<<(depth*1)))
+			iptables -t ${TABLE} -N ${PREFIX}_${a}_${b}
+			iptables -t ${TABLE} -A ${PREFIX}_${a}          -$DIRECT 0.0.$((bv/256)).$((bv%256))/0.0.$((bm/256)).$((bm%256)) -j ${PREFIX}_${a}_${b}
+		done
+		# echo -n .
+	done
+	echo "COMMIT" >> $iptables_file
+	# обязательно unset, иначе дальше будет плохо и будет вызываться эта функция, а не /sbin/iptables
+	unset iptables
+	# echo "всего цепочек + столько же правил $((2**depth*(2**(depth*levels)-1)/(2**depth-1)))"
+}
+
+create_connlimit() {
+	if [ "${srv[firewall.new_limit_l]}" != "" ]; then
+		# todo сделать по пользователям
+		limit=$((${srv[firewall.new_limit_l]}/8)) #делим на 8 классов соурсов и отдельно tcp udp
+		iptables -t mangle -N NEW_LIMIT_L_TCP
+		iptables -t mangle -F NEW_LIMIT_L_TCP
+		iptables -t mangle -N NEW_LIMIT_L_UDP
+		iptables -t mangle -F NEW_LIMIT_L_UDP
+		iptables -t mangle -A state_new ! -i E+ -p tcp --dport  1024: -j NEW_LIMIT_L_TCP
+		iptables -t mangle -A state_new ! -i E+ -p udp --dport  1024: -j NEW_LIMIT_L_UDP
+
+		iptables -t mangle -A NEW_LIMIT_L_TCP -p tcp  --dport 1723 -j RETURN
+		iptables -t mangle -A NEW_LIMIT_L_TCP -p tcp  --dport 5190 -j RETURN
+		for i in {0..7}; do
+			iptables -t mangle -A NEW_LIMIT_L_TCP -p tcp -s 0.0.0.$i/0.0.0.7 -m limit --limit $limit/sec --limit-burst 5 -j RETURN
+		done
+		iptables -t mangle -A NEW_LIMIT_L_TCP -p tcp -m limit --limit 6/min -j LOG --log-level debug --log-prefix 'NET_NEW_LIMIT_L_TCP_DROP '
+		iptables -t mangle -A NEW_LIMIT_L_TCP -j DROP    
+
+		for i in {0..7}; do
+			iptables -t mangle -A NEW_LIMIT_L_UDP -p udp -s 0.0.0.$i/0.0.0.7 -m limit --limit $limit/sec --limit-burst 5 -j RETURN
+		done
+		iptables -t mangle -A NEW_LIMIT_L_UDP -p udp -m limit --limit 6/min -j LOG --log-level debug --log-prefix 'NET_NEW_LIMIT_L_UDP_DROP '
+		iptables -t mangle -A NEW_LIMIT_L_UDP -j DROP                    
+	fi
+
+	if [ "${srv[firewall.new_limit_e]}" != "" ]; then
+		# todo сделать по пользователям
+		# limit=$((NET_NEW_LIMIT_E/8)) #делим на 8 классов соурсов и отдельно tcp udp
+		limit=$((${srv[firewall.new_limit_e]}/8)) #делим на 8 классов соурсов и отдельно tcp udp
+		iptables -t mangle -N NEW_LIMIT_E_TCP
+		iptables -t mangle -F NEW_LIMIT_E_TCP
+		iptables -t mangle -N NEW_LIMIT_E_UDP
+		iptables -t mangle -F NEW_LIMIT_E_UDP    
+		iptables -t mangle -A state_new -i E+ -p tcp --dport  1024: -j NEW_LIMIT_E_TCP
+		iptables -t mangle -A state_new -i E+ -p udp --dport  1024: -j NEW_LIMIT_E_UDP    
+		iptables -t mangle -A NEW_LIMIT_E_TCP -p tcp --dport 1723 -j RETURN
+		iptables -t mangle -A NEW_LIMIT_E_TCP -p tcp --dport 5190 -j RETURN
+
+		for i in {0..7}; do
+			iptables -t mangle -A NEW_LIMIT_E_TCP -p tcp -s 0.0.0.$i/0.0.0.7 -m limit --limit $limit/sec --limit-burst 5 -j RETURN
+		done
+		iptables -t mangle -A NEW_LIMIT_E_TCP -p tcp -m limit --limit 6/min -j LOG --log-level debug --log-prefix 'NET_NEW_LIMIT_E_TCP_DROP '
+		iptables -t mangle -A NEW_LIMIT_E_TCP -j DROP    
+
+		for i in {0..7}; do
+			iptables -t mangle -A NEW_LIMIT_E_UDP -p udp -s 0.0.0.$i/0.0.0.7 -m limit --limit $limit/sec --limit-burst 5 -j RETURN
+		done
+		iptables -t mangle -A NEW_LIMIT_E_UDP -p udp -m limit --limit 6/min -j LOG --log-level debug --log-prefix 'NET_NEW_LIMIT_E_UDP_DROP '
+		iptables -t mangle -A NEW_LIMIT_E_UDP -j DROP                    
+	fi
+}
+
+start() {
+	# создаем шейперы
+	$qos
+
+	# set -x
+	# создаем дерево для nat
+	iptables -t nat -N user2snat
+	iptables -t nat -A POSTROUTING -j user2snat
+
+	iptables_file=/tmp/iptables_file.nat.$$
+	echo "#" > $iptables_file
+	make_tree nat user2snat user2snat s
+	iptables-restore --noflush < $iptables_file
+	rm -f $iptables_file
+
+	# стандартные ipset'ы разрешить/запретить инет
+	ipset create ALLOW_FORWARD iphash
+	ipset create DROP_FORWARD iphash
+
+	# начало FORWARD {
+
+	# цепочка для ULOG для nfusens
+	iptables -t filter -N ULOGd
+	iptables -t filter -A ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
+
+	# посылаем в ULOG и аццептим.
+	iptables -t filter -A FORWARD -m set --set ALLOW_FORWARD src -j ULOGd 
+	iptables -t filter -A FORWARD -m set --set ALLOW_FORWARD dst -j ULOGd 
+	iptables -t filter -A FORWARD -m set --set ALLOW_FORWARD src -j ACCEPT
+	iptables -t filter -A FORWARD -m set --set ALLOW_FORWARD dst -j ACCEPT
+
+	# принимает уже установленные соединения
+	iptables -t filter -A FORWARD -m state --state ESTABLISHED -j ACCEPT
+	iptables -t filter -A FORWARD -j DROP
+	# } конец FORWARD
+
+	# создадим state_new, туда пойдут все новые соединения
+	iptables -t mangle -N state_new
+	iptables -t mangle -A PREROUTING -m state --state NEW -j state_new
+
+	# маркируем соединения
+	iptables -t mangle -A POSTROUTING -j MARK --dst-save
+	iptables -t mangle -A PREROUTING -j MARK --src-save
+
+	# посылаем промаркированные соединения в imq
+	iptables -t mangle -A PREROUTING -j IMQ --todev 0
+	iptables -t mangle -A POSTROUTING -j IMQ --todev 1
+	# set +x
+	# создадим коннлимиты
+	create_connlimit
+	$usersd start
+}
+
+stop() {
+	for table in $(</proc/net/ip_tables_names); do
+		iptables -t $table -F
+		iptables -t $table -X
+	done
+
+	ipset flush
+
+	while read tmp set tmp; do
+		ipset destroy $set
+	done <<< "$(ipset -o save list | grep "^create.*")"
+}
+
+restart() {
+	stop
+	start
+}
+
+$1 

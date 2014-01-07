@@ -2,9 +2,18 @@
 
 start() {
 	/genconfig
+	/usr/local/bin/firewall start
+	#pptpd
+	#openl2tpd
+	#pppoe-server
+	#carbon_nasd
+	#nfusens
+	#named
+	#quagga
 }
 
 stop() {
+	/usr/local/bin/firewall stop
 	return 0
 }
 
