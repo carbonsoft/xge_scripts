@@ -1,0 +1,219 @@
+#!/bin/bash --noprofile
+
+set -u
+
+iptables() {
+	/sbin/iptables $@ || echo iptables $@ >&2	
+}
+
+class_id='-'
+force_nvL=0
+depth=4
+am=$(( (2**depth)-1 ))
+bm=$(( am << depth ))
+#declare -a args
+declare -i num=0
+LOGFILE="/var/log/nat_cmd.log"
+CMD=$1;shift
+#EVENT=$1;shift
+DATA=$@
+MARK_AS_NEGBAL=2
+MARK_CHAIN="nas_nat_negbal_usersMR"
+TAB_FILE="/var/lib/nas_iptab_nat.dat"
+SAVEFILE="/var/lib/nas_users.dat"
+EVENT_IP_TREE=1 
+
+exec 3>>$LOGFILE
+
+iptab_file_refresh(){
+	if   [ ! -f "$TAB_FILE" ] || [ $((`date +%s` - `stat -c %Y "$TAB_FILE"`)) -gt 5 ]; then
+		iptables -t nat -nL --line | grep "SNAT\|MARK" > $TAB_FILE
+		grep "NAT" $TAB_FILE > $TAB_FILE.SNAT
+		grep "MARK" $TAB_FILE > $TAB_FILE.MARK
+	else
+		echo SKIP
+	fi 
+}
+
+iptab_redirect_del(){
+	return 1
+	while
+		iptables -t nat -D $MARK_CHAIN -s $IP -j MARK --set-mark $MARK_AS_NEGBAL &>/dev/null
+	do :; done
+}
+
+iptab_redirect_add(){
+	iptab_redirect_del &>/dev/null
+	iptables -t nat -A $MARK_CHAIN -s $IP -j MARK --set-mark $MARK_AS_NEGBAL
+}
+
+iptab_snat_del(){
+	echo 'Oleg fixme!!! iam iptab_snat_del' >&1
+	echo 'Oleg fixme!!! iam iptab_snat_del' >&2
+	return 1
+	iptab_file_refresh
+	iptables -t nat -D $NAT_CHAIN -s $IP -j SNAT --to-source ${SNAT_IP} &>/dev/null
+	while read OLD_NUMBER_SNAT t t t t t to t; do
+		[ -z "$OLD_NUMBER_SNAT" ] && break
+		iptables -t nat -D $NAT_CHAIN -s $IP -j SNAT --to-source ${to//to:/} &>/dev/null
+	done <<<"`fgrep \"$IP \" $TAB_FILE.SNAT`"
+}
+
+iptab_snat_add(){
+	iptab_snat_del  &>/dev/null
+	iptables -t nat -I $NAT_CHAIN -s $IP -j SNAT --to-source $SNAT_IP
+}
+
+iptab_fwd_del(){
+	ipset del ALLOW_FORWARD $IP
+}
+
+
+iptab_fwd_add(){
+	ipset add ALLOW_FORWARD $IP
+}
+
+logout_user() {
+	iptab_fwd_del
+	shaper_del
+	iptab_snat_del
+	setsid /bin/killppp.sh $IP & disown -a
+	grep -v "$IP " "$SAVEFILE" > "$SAVEFILE.$$"
+	mv -f "$SAVEFILE".$$ "$SAVEFILE" || rm -f "$SAVEFILE".$$
+}
+
+login_user() {
+	iptab_redirect_del
+	iptab_fwd_add
+	shaper_add
+	if [ "$SNAT_IP" = '0.0.0.0' ]; then
+		iptab_snat_del
+	else
+		iptab_snat_add
+	fi
+}
+
+block_user() {
+	logout_user
+	iptab_redirect_add
+}
+
+do_event(){
+	IPA=( ${IP//./ } ) 
+	MARK=$((${IPA[3]}*256*256*256+${IPA[2]}*256*256+${IPA[1]}*256+${IPA[0]}))
+
+	case "$EVENT_TYPE" in
+		B_NEGBAL | B_SYS | B_OWN | B_ADMIN) 
+			block_user
+			;;
+
+		BALANCE_POSITIVE | SPEED_SET | RAD_ACC_START )
+			login_user
+			;;
+
+		USER_DATA_CHANGED | USER_DATA_CHANGED_BEFORE | RADIUS_UPDATE_ERR | USER_DISCONNECT | GET_INFO_FAIL | RAD_ACC_TIMEOUT | RAD_ACC_STOP | TRY_DOUBLE_LOGIN | TRY_DOUBLE_ACC )
+			logout_user
+			;;
+
+		* )
+			echo "ERROR: Unknown command: $EVENT_TYPE"
+			;;
+	esac
+}
+
+tree_calc() {
+	if [ "${EVENT_IP_TREE:-}" = 1 ]; then
+		for i in ${IP//./ }; do
+			((num=(num<<8)|i))
+		done
+		(( a=num & am ))
+		(( b=(num & bm) >> depth )) 
+		addon="_${a}_${b}"
+	else
+		addon="f" ## abnormal!
+	fi
+	NAT_CHAIN="user2snat$addon"
+}
+
+#восстанавливаем всю информацию по пользователям при ребуте или перезапуске фаервола, аналог icsd
+restore_all()
+{
+	while read IP SNAT_IP OVER_LIMIT MAC t; do
+		tree_calc
+		#soi: хак, чтобы пересоздавались правила при рестарте файрвола
+		LOGGED=1
+		do_event
+	done < $SAVEFILE
+}
+
+#обновим слепок iptables если нужно
+echo $CMD $DATA >>/tmp/nas_cmd.log
+
+for VAR in $DATA; do
+	[[ "$VAR" = *"="* ]] && eval ${VAR%%=*}=\'${VAR#*=}\'
+done
+
+tree_calc
+
+#список разрешенных команд todo iptab_* команды добавить
+[[ "restore_all do_event" != *$CMD* ]] && echo error unknown CMD && exit 255
+
+FILE_CLASS_ID=/var/lib/class_id
+
+new_class_id() {
+	[ ! -f $FILE_CLASS_ID ] && class_id=2000 
+	read class_id t < $FILE_CLASS_ID
+	((class_id++))
+	while cut -d ' ' -f5 $FILE_CLASS_ID | fgrep -qw -m1 $class_id; do
+		((class_id++))
+	done
+	echo $class_id > $FILE_CLASS_ID
+}
+
+tc() {
+	/sbin/tc $@ || echo /sbin/tc $@	
+}
+
+shaper_add() {
+	# soi: правило пропускалось если задана только исходящая скорость
+	
+	[ "$RATE_IN" = '-1' -a "$RATE_OUT" = '-1' ] && return 1
+	old_ip=
+	read old_ip T T T class_id T <<< "$(fgrep -w -m 1 $IP $SAVEFILE)"
+	if [ -z $old_ip ]; then
+		echo 'мы не нашли сессию'
+		new_class_id
+	fi
+	#удаление
+	#rate_in, rate_out, ceil_in, ceil_out
+
+	quantum_out=$(( $CEIL_OUT*1000/80 ));
+	[ "$quantum_out" -gt 200000 ] && quantum_out=200000
+	[ "$quantum_out" -lt 1500   ] && quantum_out=1500
+
+	quantum_in=$(( $CEIL_IN*1000/80 ));
+	[ "$quantum_in" -gt 200000 ] && quantum_in=200000
+	[ "$quantum_in" -lt 1500   ] && quantum_in=1500
+
+	tc filter replace dev imq0 parent 1: protocol ip prio 1 handle $MARK fw classid 1:$class_id
+	tc filter replace dev imq1 parent 1: protocol ip prio 1 handle $MARK fw classid 1:$class_id
+	tc class replace dev imq0 parent 1:1 classid 1:$class_id htb rate ${RATE_OUT}kbit ceil ${CEIL_OUT}kbit prio 2 quantum $quantum_out
+	tc class replace dev imq1 parent 1:1 classid 1:$class_id htb rate ${RATE_IN}kbit  ceil ${CEIL_IN}kbit  prio 2 quantum $quantum_in
+	tc qdisc replace dev imq0 parent 1:$class_id handle $class_id: pfifo
+	tc qdisc replace dev imq1 parent 1:$class_id handle $class_id: pfifo
+}
+
+shaper_del() {
+	read old_ip t t t class_id t <<< "$(fgrep -w -m 1 $IP $SAVEFILE)"
+	if [ -z $old_ip ]; then
+		echo 'мы не нашли сессию'
+		return 1
+	fi
+	for dev in imq0 imq1; do
+		tc filter del dev "$dev" parent "1:" prio 1 handle "$MARK" fw
+		tc qdisc  del dev "$dev"     parent "1:$class_id"
+		tc class  del dev "$dev"    classid "1:$class_id"
+	done
+}
+
+$CMD
