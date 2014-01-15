@@ -1,7 +1,7 @@
 #!/bin/bash
 
 . /cfg/config
-. /etc/init.d/functions
+. /usr/local/lib/carbon_firewall_lib
 
 app=${app['appname']}
 
@@ -9,46 +9,39 @@ config=/var/lib/users.dat
 usersd=/usr/local/sbin/firewall_usersd
 qos=/usr/local/bin/shaper.sh
 
-make_tree()
-{
-	local TABLE=$1
-	local PARENT=${app}_${2}
-	local PREFIX=${app}_${3}
-	local DIRECT=$4
-	local am bm cm a depth levels
-	iptables(){
-		local tmp="$*"
-		tmp=${tmp//-t mangle/}
-		tmp=${tmp//-t filter/}
-		tmp=${tmp//-t nat/}
-		echo $tmp >> $iptables_file
-	}
+xge_nat() {
+	# создаем дерево для nat
+	iptables -t nat -N xge_postrouting
+	iptables -t nat -A POSTROUTING -j xge_postrouting
+	iptables -t nat -N xge_user2snat
+	iptables -t nat -A xge_postrouting -j xge_user2snat
 
-	#подготовим правила для iptables-restore
-	echo "*$TABLE" >>  $iptables_file
+	iptables_file=/tmp/iptables_file.nat.$$
+	echo "#" > $iptables_file
+	make_tree nat xge_user2snat xge_user2snat s
+	iptables-restore --noflush < $iptables_file
+}
 
-	depth=4
-	levels=2 # not used now
-	am=$(( (2**depth)-1 ))
-	bm=$(( am << depth ))
-	a=$(( 2**depth ))
-	while ((a--)); do
-		av=$((a<<(depth*0)))
-		iptables -t ${TABLE} -N ${PREFIX}_${a}
-		iptables -t ${TABLE} -A $PARENT -$DIRECT 0.0.$((av/256)).$((av%256))/0.0.$((am/256)).$((am%256)) -j ${PREFIX}_${a}
+# стандартные ipset'ы разрешить/запретить инет
+xge_ipset() {
+	ipset create xge_allow_forward iphash
+	ipset create xge_deny_forward iphash
+}
 
-		b=$(( 2**depth ))
-		while ((b--)); do
-			bv=$((b<<(depth*1)))
-			iptables -t ${TABLE} -N ${PREFIX}_${a}_${b}
-			iptables -t ${TABLE} -A ${PREFIX}_${a} -$DIRECT 0.0.$((bv/256)).$((bv%256))/0.0.$((bm/256)).$((bm%256)) -j ${PREFIX}_${a}_${b}
-		done
-		# echo -n .
-	done
-	echo "COMMIT" >> $iptables_file
-	# обязательно unset, иначе дальше будет плохо и будет вызываться эта функция, а не /sbin/iptables
-	unset iptables
-	# echo "всего цепочек + столько же правил $((2**depth*(2**(depth*levels)-1)/(2**depth-1)))"
+xge_filter() {
+	# цепочка для ULOG для nfusens
+	iptables -t filter -N xge_forward
+	iptables -t filter -A FORWARD -j xge_forward
+	iptables -t filter -N xge_ULOGd
+	iptables -t filter -A xge_ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
+	iptables -t filter -A xge_forward -m set --set xge_allow_forward src -j xge_ULOGd
+	iptables -t filter -A xge_forward -m set --set xge_allow_forward dst -j xge_ULOGd
+	iptables -t filter -A xge_forward -m set --set xge_allow_forward src -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_allow_forward dst -j ACCEPT
+
+	# принимает уже установленные соединения
+	iptables -t filter -A xge_forward -m state --state ESTABLISHED -j ACCEPT
+	iptables -t filter -A xge_forward -j DROP
 }
 
 create_connlimit() {
@@ -103,43 +96,7 @@ create_connlimit() {
 	fi
 }
 
-start() {
-	$qos
-
-	# создаем дерево для nat
-	iptables -t nat -N xge_postrouting
-	iptables -t nat -A POSTROUTING -j xge_postrouting
-	iptables -t nat -N xge_user2snat
-	iptables -t nat -A xge_postrouting -j xge_user2snat
-
-	iptables_file=/tmp/iptables_file.nat.$$
-	echo "#" > $iptables_file
-	make_tree nat xge_user2snat xge_user2snat s
-	iptables-restore --noflush < $iptables_file
-	# rm -f $iptables_file
-
-	# стандартные ipset'ы разрешить/запретить инет
-	ipset create xge_allow_forward iphash
-	ipset create xge_allow_forward iphash
-
-	# начало FORWARD {
-
-	# цепочка для ULOG для nfusens
-	iptables -t filter -N xge_forward
-	iptables -t filter -A FORWARD -j xge_forward
-	iptables -t filter -N xge_ULOGd
-	iptables -t filter -A xge_ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
-
-	# посылаем в ULOG и аццептим.
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward src -j xge_ULOGd
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward dst -j xge_ULOGd
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward src -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward dst -j ACCEPT
-
-	# принимает уже установленные соединения
-	iptables -t filter -A xge_forward -m state --state ESTABLISHED -j ACCEPT
-	iptables -t filter -A xge_forward -j DROP
-
+xge_mangle() {
 	# создадим state_new, туда пойдут все новые соединения
 	iptables -t mangle -N xge_prerouting
 	iptables -t mangle -A PREROUTING -j xge_prerouting
@@ -147,6 +104,7 @@ start() {
 	iptables -t mangle -A POSTROUTING -j xge_postrouting
 	iptables -t mangle -N state_new
 	iptables -t mangle -A xge_prerouting -m state --state NEW -j state_new
+	create_connlimit
 
 	# маркируем соединения и шлём в шейперы
 	iptables -t mangle -A xge_prerouting -j MARK --src-save
@@ -154,22 +112,20 @@ start() {
 	iptables -t mangle -A xge_postrouting -j MARK --dst-save
 	iptables -t mangle -A xge_postrouting -j IMQ --todev 1
 
-	create_connlimit
+}
+
+start() {
+	$qos
+	xge_ipset
+	xge_nat
+	xge_filter
+	xge_mangle
 	$usersd start
 }
 
 stop() {
-	echo "TODO: flush only $app chains"
-	# for table in $(</proc/net/ip_tables_names); do
-	#	iptables -t $table -F
-	#	iptables -t $table -X
-	#done
-
-	#ipset flush
-
-	#while read tmp set tmp; do
-	#	ipset destroy $set
-	#done <<< "$(ipset -o save list | grep "^create.*")"
+	iptables_cleanup
+	ipset_cleanup
 }
 
 restart() {

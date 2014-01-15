@@ -1,0 +1,100 @@
+#!/bin/bash
+
+make_tree() {
+	local TABLE=$1
+	local PARENT=${app}_${2}
+	local PREFIX=${app}_${3}
+	local DIRECT=$4
+	local am bm cm a depth levels
+
+	iptables(){
+		local tmp="$*"
+		tmp=${tmp//-t mangle/}
+		tmp=${tmp//-t filter/}
+		tmp=${tmp//-t nat/}
+		echo $tmp >> $iptables_file
+	}
+
+	#подготовим правила для iptables-restore
+	echo "*$TABLE" >>  $iptables_file
+
+	depth=4
+	levels=2 # not used now
+	am=$(( (2**depth)-1 ))
+	bm=$(( am << depth ))
+	a=$(( 2**depth ))
+	while ((a--)); do
+		av=$((a<<(depth*0)))
+		iptables -t ${TABLE} -N ${PREFIX}_${a}
+		iptables -t ${TABLE} -A $PARENT -$DIRECT 0.0.$((av/256)).$((av%256))/0.0.$((am/256)).$((am%256)) -j ${PREFIX}_${a}
+
+		b=$(( 2**depth ))
+		while ((b--)); do
+			bv=$((b<<(depth*1)))
+			iptables -t ${TABLE} -N ${PREFIX}_${a}_${b}
+			iptables -t ${TABLE} -A ${PREFIX}_${a} -$DIRECT 0.0.$((bv/256)).$((bv%256))/0.0.$((bm/256)).$((bm%256)) -j ${PREFIX}_${a}_${b}
+		done
+		# echo -n .
+	done
+	echo "COMMIT" >> $iptables_file
+	# обязательно unset, иначе дальше будет плохо и будет вызываться эта функция, а не /sbin/iptables
+	unset iptables
+	# echo "всего цепочек + столько же правил $((2**depth*(2**(depth*levels)-1)/(2**depth-1)))"
+}
+
+get_app_chains() {
+	iptables-save -t $1 | grep -o ":${app}_[A-Za-z]*" | tr -d ':'
+}
+
+flush_chains() {
+	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	get_app_chains $1 > $tmpfile
+	while read chain; do
+		iptables -t $1 -F $chain
+	done < $tmpfile
+	rm -f $tmpfile
+}
+
+delete_chains() {
+	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	get_app_chains $1 > $tmpfile
+	while read chain; do
+		iptables -t $1 -X $chain
+	done < $tmpfile
+	rm -f $tmpfile
+}
+
+remove_links() {
+	local table="$1"
+	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	iptables-save -t $table | grep -- "-j ${app}_[A-Za-z]*" > $tmpfile
+	while read line; do 
+		iptables -t $table ${line/A/D}
+	done < $tmpfile
+	rm -f $tmpfile
+}
+
+iptables_cleanup() {
+	for table in filter nat mangle; do
+		flush_chains $table
+		remove_links $table
+		delete_chains $table
+	done
+}
+
+flush_ipset() {
+	echo "TODO: flush only $app ipset"
+	ipset flush
+}
+
+destroy_ipset() {
+	echo "TODO: destroy only $app ipset"
+	while read tmp set tmp; do
+		ipset destroy $set
+	done <<< "$(ipset -o save list | grep "^create.*")"
+}
+
+ipset_cleanup() {
+	flush_ipset
+	destroy_ipset
+}
