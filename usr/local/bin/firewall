@@ -42,6 +42,10 @@ xge_filter() {
 	# принимает уже установленные соединения
 	iptables -t filter -A xge_forward -m state --state ESTABLISHED -j ACCEPT
 	iptables -t filter -A xge_forward -j DROP
+
+	# получение команд от биллинга
+	iptables -t filter -N xge_in_accept
+	iptables -t filter -A xge_in_accept -s ${radclient['authserver']##*:} -p udp --dport 44 -j ACCEPT
 }
 
 create_connlimit() {
