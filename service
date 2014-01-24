@@ -3,6 +3,7 @@
 start() {
 	/genconfig
 	/usr/local/bin/firewall start
+	/etc/init.d/carbon_nasd start
 	#pptpd
 	#openl2tpd
 	#pppoe-server
@@ -14,6 +15,7 @@ start() {
 
 stop() {
 	/usr/local/bin/firewall stop
+	/etc/init.d/carbon_nasd stop
 	return 0
 }
 

@@ -1,0 +1,20 @@
+#!/bin/bash --noprofile
+
+. /cfg/config
+
+echo 50000000 > /proc/sys/net/core/rmem_default
+i=0
+
+killall -KILL socat &>/dev/null
+while true; do
+	socat -T 1 -b 50000000  UDP4-LISTEN:44,fork - 2>/dev/null |\
+		while read psw ASR_DB_PASS cmd event data; do
+			if [ "$psw" != "${radclient['secret']}" ]; then
+				echo psw incorrect. "$psw" != "${radclient['secret']}"
+				continue
+			fi
+			let i++
+			echo $(date) "$cmd" "$event" "$data" &
+			/usr/local/bin/nas_cmd5 "$cmd" "$event" "$data"
+		done
+done
