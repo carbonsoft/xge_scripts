@@ -3,6 +3,7 @@
 # description: Main worker
 
 . /etc/rc.d/init.d/functions
+. /cfg/config
 
 ALREADY_RUN=111
 RETVAL=1
