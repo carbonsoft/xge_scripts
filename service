@@ -4,7 +4,7 @@ start() {
 	/genconfig
 	/usr/local/bin/firewall start
 	/etc/init.d/carbon_nasd start
-	#pptpd
+	pptpd --delegate
 	#openl2tpd
 	#pppoe-server
 	#carbon_nasd
@@ -16,6 +16,7 @@ start() {
 stop() {
 	/usr/local/bin/firewall stop
 	/etc/init.d/carbon_nasd stop
+	killall pptpd
 	return 0
 }
 
