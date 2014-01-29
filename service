@@ -5,7 +5,7 @@ start() {
 	/usr/local/bin/firewall start
 	/etc/init.d/carbon_nasd start
 	echo "TODO: pptpd as init"
-	pptpd --delegate
+	/usr/local/sbin/pptpd --delegate
 	#openl2tpd
 	#pppoe-server
 	#carbon_nasd
