@@ -4,7 +4,7 @@ start() {
 	/genconfig
 	/usr/local/bin/firewall start
 	/etc/init.d/carbon_nasd start
-	pptpd --delegate
+	/usr/local/sbin/pptpd --delegate
 	#openl2tpd
 	#pppoe-server
 	#carbon_nasd
