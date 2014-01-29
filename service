@@ -4,6 +4,7 @@ start() {
 	/genconfig
 	/usr/local/bin/firewall start
 	/etc/init.d/carbon_nasd start
+	echo "TODO: pptpd as init"
 	pptpd --delegate
 	#openl2tpd
 	#pppoe-server
@@ -16,6 +17,7 @@ start() {
 stop() {
 	/usr/local/bin/firewall stop
 	/etc/init.d/carbon_nasd stop
+	echo "TODO: pptpd as init"
 	killall pptpd
 	return 0
 }
