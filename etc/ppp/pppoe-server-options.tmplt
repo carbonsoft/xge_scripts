@@ -1,0 +1,13 @@
+plugin /usr/lib64/pppd/2.4.5/radius.so
+auth
+lcp-echo-failure 10
+lcp-echo-interval 30
+name @@@pppoe_server_name%%%
+nodefaultroute
+noendpoint
+noipdefault
+noipx
+nolog
+ipparam @@@ppp_server_ip%%%
+ms-dns @@@ppp_server_ip%%%
+ms-dns @@@ppp_server_ip%%%

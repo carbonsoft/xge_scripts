@@ -1,0 +1,9 @@
+system modify \
+	tunnel_establish_timeout=0 \
+	session_establish_timeout=0
+ppp profile modify profile_name=default \
+	local_ipaddr=@@@openl2tpd_addr%%% \
+	auth_mschapv2=yes \
+	auth_eap=yes \
+	auth_chap=yes \
+	auth_pap=yes

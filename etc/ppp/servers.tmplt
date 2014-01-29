@@ -1,0 +1,6 @@
+#Server Name or Client/Server pair		Key
+#----------------				---------------
+#portmaster.elemental.net			hardlyasecret
+#portmaster2.elemental.net	    		donttellanyone
+#@@@PPPD_RADIUS_IP%%%				@@@PPPD_RADIUS_SECRET%%%
+@@@server_ip%%%				@@@secret%%%

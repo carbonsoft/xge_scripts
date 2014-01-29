@@ -1,0 +1,56 @@
+debug
+plugin /usr/lib64/pppd/2.4.5/radius.so
+auth
+logfile /var/log/ppp/pptpd.log
+
+name bill
+
+#proxyarp
+#bsdcomp 0
+nopcomp
+noipdefault
+
+# This option applies if you use ppp with chapms-strip-domain patch
+#chapms-strip-domain
+
+refuse-pap
+refuse-chap
+refuse-mschap
+require-mschap-v2
+#require-mppe-128
+#require-mppe-40
+#nomppe
+@@@nomppe_str%%%
+@@@require_mppe_40_str%%%
+@@@require_mppe_128_str%%%
+#mppe-stateless # By default
+
+# These options will tell ppp to pass on these to your clients
+# To use ms-wins or ms-dns in options.pptpd it must exist in /etc/resolv.conf
+#ms-wins your.server.here
+#ms-dns 
+
+# Let's try
+#mppe-stateful 
+
+nodefaultroute
+
+lcp-echo-failure 10
+lcp-echo-interval 30
+lcp-max-configure 30
+lcp-restart 1
+ipcp-max-configure 30
+ipcp-restart 1
+
+#mtu 1350
+#mru 1350
+nolog
+mtu 1460
+mru 1460
+@@@ppp_server_ip%%%:
+ms-dns @@@ppp_server_ip%%%
+ms-dns @@@ppp_server_ip%%%
+#mppe-optional
+@@@mppe_optional_str%%%
+#sync
+
