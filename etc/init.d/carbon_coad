@@ -1,0 +1,73 @@
+#!/bin/bash
+# chkconfig: - 81 15
+# description: Main worker
+
+. /etc/rc.d/init.d/functions
+. /cfg/config
+
+ALREADY_RUN=111
+RETVAL=1
+prog="Carbon COA commands processor"
+PROG="carbon_coad"
+LOCKFILE="/var/lock/subsys/$PROG"
+
+start() {
+	[ "${remote_management['carbon_nasd.enabled']}" = '1' ] || exit 255
+	echo -n $"Starting $prog: "
+	[ -s /var/run/$PROG.pid ] && return 0
+	setsid /usr/local/sbin/$PROG >>/var/log/$PROG.log 2>&1 & disown -a
+	RETVAL=$?
+	pid=$!
+	if [ "$RETVAL" = '0' ]; then
+		echo $pid >/var/run/$PROG.pid
+		touch $LOCKFILE
+	fi
+	[ "$RETVAL" != "0" ] && rm -f $LOCKFILE /var/run/$PROG.pid
+	return $RETVAL
+}
+
+stop() {
+	[ "${remote_management['carbon_coad.enabled']}" = '1' ] || exit 255
+	echo -n $"Stopping $prog: "
+	# killproc $PROG 2>/dev/null
+	[ -s /var/run/$PROG.pid ] && kill  $(</var/run/$PROG.pid)
+	RETVAL=$?
+	rm -f $LOCKFILE /var/run/$PROG.pid
+	return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+	start)
+		start
+		RETVAL=$?
+		[ "$RETVAL" = "0" ] && echo_success || echo_failure
+		;;
+	stop)
+		stop
+		RETVAL=$?
+		[ "$RETVAL" = "0" ] && echo_success || echo_failure
+		;;
+	restart)
+		[ "${remote_management['carbon_nasd.enabled']}" = '1' ] || exit 255
+		stop && echo_success || echo_failure
+		echo
+		start
+		RETVAL=$?
+		[ "$RETVAL" != "0" ] && echo_success || echo_failure
+		;;
+	condrestart)
+		[ -e "$LOCKFILE" ] && restart
+		RETVAL=$?
+		;;
+	status)
+		status $proc
+		RETVAL=$?
+		;;
+	*)  
+		echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+		exit 1
+		;;
+esac
+echo 
+exit $RETVAL
