@@ -1,25 +1,26 @@
 #!/bin/bash
 
+
+__exec() {
+	$@ || ((retval++))
+}
+
 start() {
-	/genconfig
-	/usr/local/bin/firewall start
-	/etc/init.d/carbon_nasd start
-	echo "TODO: pptpd as init"
-	/usr/local/sbin/pptpd --delegate
-	#openl2tpd
-	#pppoe-server
-	#carbon_nasd
-	#nfusens
-	#named
-	#quagga
+	retval=0
+	__exec /genconfig
+	__exec /usr/local/bin/firewall start 
+	__exec /etc/init.d/radiusd start
+	__exec /etc/init.d/carbon_coad start
+	return $retval
+	
 }
 
 stop() {
-	/usr/local/bin/firewall stop
-	/etc/init.d/carbon_nasd stop
-	echo "TODO: pptpd as init"
-	killall pptpd
-	return 0
+	local retval=0
+	__exec /usr/local/bin/firewall stop
+	__exec /etc/init.d/carbon_coad stop
+	__exec /etc/init.d/radiusd stop
+	return $retval
 }
 
 restart() {
