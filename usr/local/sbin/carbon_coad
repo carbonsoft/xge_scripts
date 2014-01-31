@@ -10,12 +10,21 @@ log() {
 	echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: $@"
 }
 
-while true; do
-	for cmd in $spooldir/*; do
-		log processing $cmd $(<$cmd)
-		$PROG $(<$cmd) || log failed $cmd $(<$cmd)
-		rm -f $cmd
+wait_for_files() {
+	while ! [ -f /var/spool/xge/cmd/* ]; do
+		sleep 1
 	done
+}
 
-	find -type f /var/spool/xge/cmd/ &>/dev/null || sleep 1
-done
+main() {
+	while true; do
+		wait_for_files
+		for cmd in $spooldir/*; do
+			log processing $cmd $(<$cmd)
+			$PROG $(<$cmd) || log failed $cmd $(<$cmd)
+			rm -f $cmd
+		done
+	done
+}
+
+main $@
