@@ -43,7 +43,7 @@ make_tree() {
 }
 
 get_app_chains() {
-	iptables-save -t $1 | grep -o ":${app}_[A-Za-z]*" | tr -d ':'
+	iptables-save -t $1 | grep -o ":${app}_[A-Za-z0-9_-]*" | tr -d ':'
 }
 
 flush_chains() {
@@ -83,12 +83,10 @@ iptables_cleanup() {
 }
 
 flush_ipset() {
-	echo "TODO: flush only $app ipset"
 	ipset flush
 }
 
 destroy_ipset() {
-	echo "TODO: destroy only $app ipset"
 	while read tmp set tmp; do
 		ipset destroy $set
 	done <<< "$(ipset -o save list | grep "^create.*")"

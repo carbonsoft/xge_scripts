@@ -18,8 +18,11 @@ xge_nat() {
 
 	iptables_file=/tmp/iptables_file.nat.$$
 	echo "#" > $iptables_file
-	make_tree nat xge_user2snat xge_user2snat s
-	iptables-restore --noflush < $iptables_file
+	make_tree nat user2snat user2snat s
+	if ! iptables-restore --noflush < $iptables_file; then
+		cat $iptables_file
+		exit 1
+	fi
 }
 
 # стандартные ipset'ы разрешить/запретить инет
@@ -55,8 +58,8 @@ create_connlimit() {
 		iptables -t mangle -F xge_new_limit_l_tcp
 		iptables -t mangle -N xge_new_limit_l_udp
 		iptables -t mangle -F xge_new_limit_l_udp
-		iptables -t mangle -A state_new ! -i E+ -p tcp --dport  1024: -j xge_new_limit_l_tcp
-		iptables -t mangle -A state_new ! -i E+ -p udp --dport  1024: -j xge_new_limit_l_udp
+		iptables -t mangle -A xge_state_new ! -i E+ -p tcp --dport  1024: -j xge_new_limit_l_tcp
+		iptables -t mangle -A xge_state_new ! -i E+ -p udp --dport  1024: -j xge_new_limit_l_udp
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 5190 -j RETURN
 
@@ -80,8 +83,8 @@ create_connlimit() {
 		iptables -t mangle -F xge_new_limit_e_tcp
 		iptables -t mangle -N xge_new_limit_e_udp
 		iptables -t mangle -F xge_new_limit_e_udp
-		iptables -t mangle -A state_new ! -i E+ -p tcp --dport  1024: -j xge_new_limit_e_tcp
-		iptables -t mangle -A state_new ! -i E+ -p udp --dport  1024: -j xge_new_limit_e_udp
+		iptables -t mangle -A xge_state_new ! -i E+ -p tcp --dport  1024: -j xge_new_limit_e_tcp
+		iptables -t mangle -A xge_state_new ! -i E+ -p udp --dport  1024: -j xge_new_limit_e_udp
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 5190 -j RETURN
 
@@ -101,13 +104,13 @@ create_connlimit() {
 }
 
 xge_mangle() {
-	# создадим state_new, туда пойдут все новые соединения
+	# создадим xge_state_new, туда пойдут все новые соединения
 	iptables -t mangle -N xge_prerouting
 	iptables -t mangle -A PREROUTING -j xge_prerouting
 	iptables -t mangle -N xge_postrouting
 	iptables -t mangle -A POSTROUTING -j xge_postrouting
-	iptables -t mangle -N state_new
-	iptables -t mangle -A xge_prerouting -m state --state NEW -j state_new
+	iptables -t mangle -N xge_state_new
+	iptables -t mangle -A xge_prerouting -m state --state NEW -j xge_state_new
 	create_connlimit
 
 	# маркируем соединения и шлём в шейперы
