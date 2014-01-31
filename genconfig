@@ -134,9 +134,16 @@ gen_quagga_config() {
 	genconfig
 }
 
+gen_radius_config() {
+	conffile=/etc/raddb/radiusd.conf
+	tmpltfile=/etc/raddb/radiusd.conf.tmplt
+
+	genconfig
+}
 main() {
 	gen_pppoe_config
 	gen_pptpd_config
+	gen_radius_config
 	# gen_openl2tpd_config
 	gen_radius_config
 	# gen_bind_config
