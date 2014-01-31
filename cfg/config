@@ -73,6 +73,8 @@ declare -A remote_management
 remote_management['widget']='menu "Настройки управления маршрутизатором" "Пароль задаётся в настройках Radius"'
 remote_management['carbon_nasd.enabled.widget']='checkbox "Включить демон приёма команд от биллинга" "Без него XGE-Router не будет корректно работать"'
 remote_management['carbon_nasd.enabled']='1'
+remote_management['carbon_coad.enabled.widget']='checkbox "Включить обработчик radius coa" "Без него XGE-Router не будет корректно работать"'
+remote_management['carbon_coad.enabled']='1'
 
 declare -A nfusens
 nfusens['widget']='menu "Настройки сенсора netflow" ""'
