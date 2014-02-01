@@ -14,12 +14,14 @@ app['ppp-server.ip.widget']='ip "IP-адрес VPN-серверов" "Не за�
 app['widget']='menu "Настройки маршрутизатора"'
 
 declare -A vpn
+vpn['enabled']='1'
+vpn['enabled.widget']='checkbox "Включить VPN-сервер" ""'
 vpn['pptp.enabled']='1'
 vpn['pptp.enabled.widget']='1'='checkbox "Включить поддержку PPTP" ""'
 vpn['pppoe.enabled']='1'
 vpn['pppoe.enabled.widget']='1'='checkbox "Включить поддержку PPPoE" ""'
 vpn['l2tp.enabled']='1'
-vpn['l2tp.enabled.widget']='1'='checkbox "Включить L2TP" ""'
+vpn['l2tp.enabled.widget']='1'='checkbox "Включить поддержку L2TP" ""'
 vpn['auth.pap']='1'
 vpn['auth.pap.widget']='1'='checkbox "Включить PAP-авторизацию" ""'
 vpn['auth.chap_md5']='1'
