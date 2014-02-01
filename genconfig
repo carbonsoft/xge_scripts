@@ -3,8 +3,7 @@
 CONFIG=/cfg/config
 . $CONFIG
 
-genconfig() 
-{
+genconfig() {
 	while IFS= read -r line; do
 		if [ "${line:0:1}" = "#"  ]; then
 			echo "$line"
@@ -20,56 +19,6 @@ genconfig()
 		done
 		echo "$line"
 	done < $tmpltfile >$conffile
-}
-
-gen_pppoe_config() {
-	# pppoe-server-options
-	conffile=/etc/ppp/pppoe-server-options
-	tmpltfile=/etc/ppp/pppoe-server-options.tmplt
-
-	pppoe_server_name="${pppoe_server[name]}"
-	ppp_server_ip="${app[ppp-server.ip]}"
-
-	genconfig
-}
-
-gen_pptpd_config() {
-	# pptpd.conf
-	conffile=/etc/ppp/options.pptpd
-	tmpltfile=/etc/ppp/options.pptpd.tmplt
-
-	ppp_server_ip="${app[ppp-server.ip]}"
-	require_mppe="${pptpd[mppe]}"
-	require_mppe_128_str=
-	require_mppe_40_str=
-	mppe_optional_str=
-	nomppe_str=
-	case $require_mppe in
-	nomppe )
-		nomppe_str="nomppe"
-		;;
-	require-mppe )
-		require_mppe_40_str="require-mppe-40"
-		require_mppe_128_str="require-mppe-128"
-		;;
-	#mppe-optional by default
-	* )
-		require_mppe_40_str="require-mppe-40"
-		require_mppe_128_str="require-mppe-128"
-		mppe_optional_str="mppe-optional"
-		;;
-	esac
-
-	genconfig
-}
-
-gen_openl2tpd_config() {
-	# openl2tpd.conf
-	conffile=/etc/ppp/openl2tpd.conf
-	tmpltfile=/etc/ppp/openl2tpd.conf.tmplt
-	openl2tpd_addr="${app[ppp-server.ip]}"
-
-	genconfig
 }
 
 gen_radius_config() {
@@ -90,31 +39,7 @@ gen_radius_config() {
 	genconfig
 }
 
-
-gen_bind_config() {
-	# bind
-	# declare leth_list
-	for iface in seq 0 1 2 3 4 5 6 7 8 9; do
-		if [ "${network[if$iface.role]}" = 'Local' ]; then
-			leth_list="$leth_list ${network[if$iface.ip]%%/*};"
-		fi
-	done
-
-	# не нужно, надо просто добавить настроенный защищенный ip
-	# а вот хрен. нужно.
-	if [ "${pptpd[enabled]}" = '1' -o "${pppoe_server[enabled]}" = '1' -o "${openl2tpd[enabled]}" = '1' ]; then
-		leth_list="$leth_list ${app[ppp-server.ip]};"
-	fi
-
-	conffile=/etc/named.conf
-	tmpltfile=/etc/named.conf.tmplt
-
-	genconfig
-}
-
-
 gen_hosts_file() {
-	# hosts
 	app_ip=${app[ppp-server-ip]%%/*}
 	host_name=$(hostname)
 	conffile=/etc/hosts
@@ -123,13 +48,17 @@ gen_hosts_file() {
 	genconfig
 }
 
-gen_quagga_config() {
-	# quagga
-	quagga_hostname=${srv['quagga.hostname']}
-	quagga_password=${srv['quagga.password']}
-	quagga_enable_password=${srv['quagga.enable_password']}
-	conffile=/etc/quagga/ospfd.conf
-	tmpltfile=/etc/quagga/ospfd.conf.tmplt
+gen_accel_pppd_config() {
+	conffile=/etc/accel-ppp.conf
+	tmpltfile=/etc/accel-ppp.conf.tmplt
+	[ "${vpn['pptp.enabled']}" = '1' ] && pptp_string=pptp
+	[ "${vpn['pppoe.enabled']}" = '1' ] && pppoe_string=pppoe
+	[ "${vpn['l2tp.enabled']}" = '1' ] && l2tp_string=l2tp
+	[ "${vpn['auth.pap']}" = '1' ] && pap_string=auth_pap
+	[ "${vpn['auth.chap_md5']}" = '1' ] && chap_md5_string=auth_chap_md5
+	[ "${vpn['auth.mschap1']}" = '1' ] && mschap1_string=auth_mschap_v1
+	[ "${vpn['auth.mschap2']}" = '1' ] && mschap2_string=auth_mschap_v2
+	ppp_server_ip=${app['server_ip']}
 
 	genconfig
 }
@@ -140,15 +69,12 @@ gen_radius_config() {
 
 	genconfig
 }
+
 main() {
-	gen_pppoe_config
-	gen_pptpd_config
+	gen_accel_pppd_config
 	gen_radius_config
-	# gen_openl2tpd_config
 	gen_radius_config
-	# gen_bind_config
 	gen_hosts_file
-	# gen_quagga_config
 }
 
 main $@

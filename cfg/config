@@ -13,6 +13,22 @@ app['ppp-server.ip']='10.0.201.1'
 app['ppp-server.ip.widget']='ip "IP-адрес VPN-серверов" "Не забудьте продублировать в network"'
 app['widget']='menu "Настройки маршрутизатора"'
 
+declare -A vpn
+vpn['pptp.enabled']='1'
+vpn['pptp.enabled.widget']='1'='checkbox "Включить поддержку PPTP" ""'
+vpn['pppoe.enabled']='1'
+vpn['pppoe.enabled.widget']='1'='checkbox "Включить поддержку PPPoE" ""'
+vpn['l2tp.enabled']='1'
+vpn['l2tp.enabled.widget']='1'='checkbox "Включить L2TP" ""'
+vpn['auth.pap']='1'
+vpn['auth.pap.widget']='1'='checkbox "Включить PAP-авторизацию" ""'
+vpn['auth.chap_md5']='1'
+vpn['auth.chap_md5.widget']='1'='checkbox "Включить CHAP (md5) авторизацию" ""'
+vpn['auth.mschap1']='1'
+vpn['auth.mschap1.widget']='1'='checkbox "Включить MS-CHAP v1" ""'
+vpn['auth.mschap2']='1'
+vpn['auth.mschap2.widget']='1'='checkbox "Включить MS-CHAP v2" ""'
+
 declare -A network
 network['widget']='menu "Настройка сети" "Настройка сети"'
 
@@ -41,26 +57,6 @@ network['if0.tag']=''
 network['if0.type']='ethernet'
 network['if0.vlan']='0'
 
-declare -A pptpd
-pptpd['enabled']='1'
-pptpd['enabled.widget']='checkbox "Включить PPTP-сервер" "Включить PPTP-сервер"'
-pptpd['mppe.list']='"mppe-optional" "Опциональное шифрование" "Позволяет подключаться к серверу как с шифрованием, так и без" "nomppe" "Запрещать шифрование" "Позволяет подключаться к серверу только с отключенным шифрованием" "require-mppe" "Требовать шифрование" "Позволяет подключаться к серверу только с включенным шифрованием"'
-pptpd['mppe']='mppe-optional'
-pptpd['mppe.widget']='radiolist "Настройки шифрования PPTP" "Выбор типа шифрования PPTP, либо отказ от него"'
-pptpd['widget']='menu "Настройки PPTPD" ""'
-
-declare -A openl2tpd
-openl2tpd['widget']='menu "Настройки OpenL2TPD" ""'
-openl2tpd['enabled']='0'
-openl2tpd['enabled.widget']='checkbox "Включить OpenL2TP-сервер" "Включить OpenL2TP-сервер, экспериментально."'
-
-declare -A pppoe_server
-pppoe_server['widget']='menu "Настройки PPPoE-сервера" ""'
-pppoe_server['enabled']='1'
-pppoe_server['enabled.widget']='checkbox "Включить PPPoE-сервер" "Включить PPPoE-сервер"'
-pppoe_server['name']='IdecoAS'
-pppoe_server['name.widget']='inputbox "Имя концентратора" "Для абонентов - имя службы"'
-
 declare -A firewall
 firewall['enabled']='1'
 firewall['enabled.widget']='checkbox "Включить файрвол" ""'
@@ -81,25 +77,6 @@ nfusens['widget']='menu "Настройки сенсора netflow" ""'
 nfusens['enabled.widget']='checkbox "Включить nfusens" "Без него XGE-Router не будет корректно работать"'
 nfusens['enabled']='1'
 
-declare -A bind
-bind['widget']="Настройка DNS-сервера"
-bind['enabled']='1'
-bind['enabled.widget']='checkbox "Включить DNS сервер BIND" "Включить DNS сервер BIND"'
-
-declare -A quagga
-quagga['widget']='menu "Настройки Quagga BGP/OSPF/RIP" ""'
-quagga['hostname.widget']='inputbox "Hostname для Quagga" "Нужно для BGP, OSPF, RIP"'
-quagga['hostname']='Carbon'
-quagga['enabled.widget']='checkbox "Включить ROUTING-сервер" "Quagga (Zebra): BGP, OSPF, RIP"'
-quagga['enabled']='0'
-quagga['password.widget']='inputbox "Пароль для терминального доступа" "Если не задан - терминальный доступ будет запрещён"'
-quagga['password']=''
-quagga['password.widget']='inputbox "Пароль для терминального доступа" "Если не задан - терминальный доступ будет запрещён"'
-quagga['enable_password']=''
-quagga['enable_password.widget']='inputbox "Пароль для привилегированного доступа" "Если не задан - привелигерованный доступ будет запрещён"'
-quagga['ospf.enabled.widget']='checkbox "Включить поддержку OSPF" ""'
-quagga['ospf.enabled']='0'
-
 declare -A radclient
 radclient['widget']='menu "Настройки Radius" "Настройки подключения к биллингу (АСР / ААА-серверу)"'
 radclient['secret']='123'
@@ -112,18 +89,6 @@ radclient['acctserver']='10.0.0.254:1813'
 radclient['acctserver.widget']='inputbox "Сервер аккаунтинга" "Сервер аккаунтинга, формат: IP:PORT"'
 radclient['nas_identifier']='10.0.0.10'
 radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-сервера" "Является идентификатором этого AS в настройках Radius-сервера биллинга"'
-
-declare -A help
-help['widget']='textbox "Справка" "/app/carbon_as/usr/share/softrouter"'
-
-declare -A reg
-reg['widget']='menu "Регистрация NAS-сервера" ""'
-reg['regnumber']=''
-reg['regnumber.widget']='inputbox "Регистрационный номер" ""'
-reg['installcode']=''
-reg['installcode.widget']='inputbox "Код установки" ""'
-reg['actcode']=''
-reg['actcode.widget']='inputbox "Код активации" ""'
 
 declare -A ctl
 ctl['start']='/service start'
