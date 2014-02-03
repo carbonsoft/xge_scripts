@@ -33,7 +33,6 @@ gen_radius_config() {
 	tmpltfile=/etc/radiusclient/servers.tmplt
 
 	genconfig
-
 	conffile=/etc/radiusclient/radiusclient.conf
 	tmpltfile=/etc/radiusclient/radiusclient.conf.tmplt
 
@@ -52,6 +51,17 @@ gen_hosts_file() {
 gen_accel_pppd_config() {
 	conffile=/etc/accel-ppp.conf
 	tmpltfile=/etc/accel-ppp.conf.tmplt
+	acctserver="${radclient[acctserver]}"
+	authserver="${radclient[authserver]}"
+	acctserver_ip=${acctserver%%:*}
+	acctserver_port=${acctserver##*:}
+	authserver_ip=${authserver%%:*}
+	authserver_port=${authserver##*:}
+	server_ip=${authserver%%:*}
+	secret="${radclient[secret]}"
+	nas_identifier="${radclient[nas_identifier]}"
+	ppp_server_ip=${app['ppp-server.ip']}
+
 	[ "${vpn['pptp.enabled']}" = '1' ] && pptp_string=pptp
 	[ "${vpn['pppoe.enabled']}" = '1' ] && pppoe_string=pppoe
 	[ "${vpn['l2tp.enabled']}" = '1' ] && l2tp_string=l2tp
@@ -59,7 +69,6 @@ gen_accel_pppd_config() {
 	[ "${vpn['auth.chap_md5']}" = '1' ] && chap_md5_string=auth_chap_md5
 	[ "${vpn['auth.mschap1']}" = '1' ] && mschap1_string=auth_mschap_v1
 	[ "${vpn['auth.mschap2']}" = '1' ] && mschap2_string=auth_mschap_v2
-	ppp_server_ip=${app['server_ip']}
 
 	genconfig
 }
