@@ -133,13 +133,14 @@ interface=eth0
 
 [radius]
 #dictionary=/usr/local/share/accel-ppp/radius/dictionary
-nas-identifier=accel-ppp
-nas-ip-address=127.0.0.1
-gw-ip-address=192.168.100.1
-#auth-server=127.0.0.1:1812,testing123 (obsolete)
-#acct-server=127.0.0.1:1813,testing123 (obsolete)
+nas-identifier=@@@nas_identifier%%%
+nas-ip-address=@@@nas_identifier%%%
+gw-ip-address=@@@ppp_server_ip%%%
+# auth-server=@@@authserver%%%,@@@secret%%% (obsolete)
+# acct-server=@@@acctserver%%%,,@@@secret%%% (obsolete)
 #server=127.0.0.1,testing123 (obsolete)
-server=127.0.0.1,testing123,auth-port=1812,acct-port=1813,req-limit=0,fail-time=0
+server=@@@authserver_ip%%%,@@@secret%%%,auth-port=@@@authserver_port%%%,acct-port=0,req-limit=100,fail-time=0
+server=@@@acctserver_ip%%%,@@@secret%%%,auth-port=0,acct-port=@@@acctserver_port%%%,req-limit=100,fail-time=0
 dae-server=127.0.0.1:3799,testing123
 verbose=1
 #timeout=3
