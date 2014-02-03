@@ -33,6 +33,7 @@ gen_radius_config() {
 	tmpltfile=/etc/radiusclient/servers.tmplt
 
 	genconfig
+
 	conffile=/etc/radiusclient/radiusclient.conf
 	tmpltfile=/etc/radiusclient/radiusclient.conf.tmplt
 
@@ -63,16 +64,8 @@ gen_accel_pppd_config() {
 	genconfig
 }
 
-gen_radius_config() {
-	conffile=/etc/raddb/radiusd.conf
-	tmpltfile=/etc/raddb/radiusd.conf.tmplt
-
-	genconfig
-}
-
 main() {
 	gen_accel_pppd_config
-	gen_radius_config
 	gen_radius_config
 	gen_hosts_file
 }
