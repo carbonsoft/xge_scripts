@@ -11,10 +11,29 @@ prog="accel-pppd"
 PROG="accel-pppd"
 LOCKFILE="/var/lock/subsys/$PROG"
 config=/etc/accel-ppp.conf
+
+copy_kernel_module() {
+	src_kernel_module="/usr/share/pptp.ko"
+	dst_kernel_module="/lib/modules/$(uname -r)/kernel/extra/pptp.ko"
+	lsmod | grep -wq pptp && return 0
+	[ -f "$dst_kernel_module" ] && cmp "$src_kernel_module" "$dst_kernel_module" && return 0
+	mkdir "${dst_kernel_module%*/}"
+	cp -p "$src_kernel_module" "$dst_kernel_module"
+	depmod -a
+}
+
+insert_kernel_module() {
+	lsmod | grep -wq pptp && return 0
+	depmod -a
+	modprobe -f pptp
+}
+
 start() {
 	[ "${vpn[enabled]}" = '1' ] || exit 255
 	echo -n $"Starting $prog: "
 	[ -s /var/run/$PROG.pid ] && return 0
+	copy_kernel_module
+	insert_kernel_module
 	/usr/local/sbin/$PROG -c $config -p  /var/run/$PROG.pid -d
 	RETVAL=$?
 	pid=$!
