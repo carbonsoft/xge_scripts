@@ -35,19 +35,25 @@ die() {
 	exit $err
 }
 
-update_session() {
+session_update() {
 	session_id="$1"
 	shift
 	var="$1"
 	shift
-	val="${@// /|}"
+	val="$@"
+	_n=$'\n'
+	_t=$'\t'
+	val="${val//[-]/_}"
+	val="${val//[$_n|$_t| ]/|}"
+	[ "$val" = "" ] && val='-'
 	row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	[ -s $session_dir/$session_id ] && read row < $session_dir/$session_id
 	read ip username snat policy lists mac tmp <<< "$row"
 	ip=$session_id #hack
-	eval $var=$val
+	[ "$username" = '-' ] && username="S$ip"
+	eval $var='$val'
 	[ ! -d $session_dir ] && mkdir -p $session_dir
-	echo $ip $username $snat $policy $lists $mac $ip > $session_dir/$session_id.new
+	echo $ip $username $snat $policy $lists $mac $tmp > $session_dir/$session_id.new
 	[ "$?" = '0' ] && mv -f $session_dir/$session_id.new $session_dir/$session_id
 }
 
@@ -133,7 +139,7 @@ iptab_file_refresh() {
 
 snat_tree_add() {
 	snat_tree_del $1 $2 &>/dev/null
-	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && update_session $1 snat $2
+	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && session_update $1 snat $2
 }
 
 snat_tree_del() {
@@ -144,7 +150,7 @@ snat_tree_del() {
 		[ -z "$OLD_NUMBER_SNAT" ] && break
 		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/}
 	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
-	update_session $1 snat -
+	session_update $1 snat ''
 }
 
 session() {
@@ -165,6 +171,7 @@ session() {
 	esac
 }
 
+# 	__ipset $action $list $ip
 __ipset() {
 	if [ "$1" = 'add' ]; then
 		if ipset -q test $2 $3; then
@@ -172,24 +179,63 @@ __ipset() {
 			return 0
 		fi
 	fi
+	ipset $@ || return $?
+	lists="$(ipset -o save -l | fgrep -w $3 | cut -d ' ' -f2 | xargs)"
+	session_update $3 lists $lists
 
-	ipset $@
 }
 
 mac_set() {
-	update_session "$1" mac "$2"
+	session_update "$1" mac "$2"
 }
 
 mac_remove() {
-	update_session "$1" mac -
+	session_update "$1" mac ''
+}
+
+policy() {
+	# policy_set 10.128.0.75 in 1000 2000 3000 out 1000 2000 3000
+	policy_set() {
+		echo $FUNCNAME $@
+		local ip="$1"
+		shift
+		params="$@"
+		in=${params##*in }
+		in=${in%% out*}
+		out=${params##*out }
+		read ceil_in rate_in burst_in tmp_in <<< "$in"
+		read ceil_out rate_out burst_out tmp_out <<< "$out"
+		# shaper_add bla bl bla
+		[ "$?" = '0' ] && session_update $ip policy "in $in out $out"
+	}
+
+	# policy_remove 10.128.0.75
+	policy_remove() {
+		echo $FUNCNAME $@
+		local ip="$1"
+		shift
+		# shaper del
+		[ "$?" = '0' ] && session_update $ip policy ''
+	}
+
+	policy_cmd="$1"
+	shift
+	case $policy_cmd in
+	set | remove )
+		policy_$policy_cmd $@
+		;;
+	* )
+		echo "bad subcommand: $policy_cmd $@"
+		return 1
+		;;
+	esac
 }
 
 ip() {
 	local list="$1"
 	local action="$2"
 	local ip="$3"
-
-	echo $FUNCNAME $@
+	echo "$FUNCNAME $@"
 	[ "${list:0:4}" != "xge_" ] && list=xge_$list
 
 	if  [ "$#" -ge '4' -a "$list" = 'xge_snat' ]; then
@@ -200,7 +246,6 @@ ip() {
 			return $?
 		fi
 	fi
-
 	__ipset $action $list $ip
 }
 
@@ -208,7 +253,7 @@ main() {
 	cmd=$1
 	shift
 	case $cmd in
-	ip | filter | nat | mangle | session )
+	ip | filter | nat | mangle | session | policy )
 		$cmd $@
 		;;
 	* )
