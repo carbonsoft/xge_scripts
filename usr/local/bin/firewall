@@ -27,8 +27,11 @@ xge_nat() {
 
 # стандартные ipset'ы разрешить/запретить инет
 xge_ipset() {
-	ipset create xge_allow_forward iphash
-	ipset create xge_deny_forward iphash
+	ipset create xge_forward_allow iphash
+	ipset create xge_forward_deny iphash
+	ipset create xge_mangle_accept iphash
+	ipset create xge_nat_default iphash
+	ipset create xge_nat_negbal iphash
 }
 
 xge_filter() {
@@ -37,10 +40,10 @@ xge_filter() {
 	iptables -t filter -A FORWARD -j xge_forward
 	iptables -t filter -N xge_ULOGd
 	iptables -t filter -A xge_ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward src -j xge_ULOGd
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward dst -j xge_ULOGd
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward src -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_allow_forward dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_forward_allow src -j xge_ULOGd
+	iptables -t filter -A xge_forward -m set --set xge_forward_allow dst -j xge_ULOGd
+	iptables -t filter -A xge_forward -m set --set xge_forward_allow src -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_forward_allow dst -j ACCEPT
 
 	# принимает уже установленные соединения
 	iptables -t filter -A xge_forward -m state --state ESTABLISHED -j ACCEPT
@@ -49,6 +52,15 @@ xge_filter() {
 	# получение команд от биллинга
 	iptables -t filter -N xge_in_accept
 	iptables -t filter -A xge_in_accept -s ${radclient['authserver']##*:} -p udp --dport 44 -j ACCEPT
+
+	# pptp
+	iptables -t filter -A xge_in_accept -p tcp --dport 1723 -j ACCEPT
+	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
+
+	# radius coa, TODO fix range
+	iptables -t filter -A xge_in_accept -p udp --dport 1815 -j ACCEPT
+
+	iptables -t filter -I INPUT -j xge_in_accept
 }
 
 create_connlimit() {
@@ -110,6 +122,7 @@ xge_mangle() {
 	iptables -t mangle -N xge_postrouting
 	iptables -t mangle -A POSTROUTING -j xge_postrouting
 	iptables -t mangle -N xge_state_new
+	iptables -t mangle -A xge_prerouting -m set --set xge_mangle_accept src -j ACCEPT
 	iptables -t mangle -A xge_prerouting -m state --state NEW -j xge_state_new
 	create_connlimit
 

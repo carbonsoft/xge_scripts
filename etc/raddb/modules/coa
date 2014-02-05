@@ -1,7 +1,8 @@
 # -*- text -*-
 
 exec coa {
-	wait = no
-	program = "/usr/local/bin/queue_coa_command.sh %{User-Name} %{Cisco-AVPair} %{Cisco-Account-Info} "
+	wait = yes
+	program = "/usr/local/bin/xgesh %{User-Name} %{Filter-Id}"
 	input_pairs = request
+	output_pairs = reply
 }

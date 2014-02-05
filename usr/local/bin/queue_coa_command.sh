@@ -1,3 +1,8 @@
 #!/bin/bash
 
-echo "$@" >> /var/spool/xge/cmd/$(date +%s)_$$.coa
+#TODO flock timeout 10s
+
+echo -e "Reply-Message = \"$@\""
+set > /tmp/oppa_oppa
+#echo -e "Error-Cause = Residual-Context-Removed"
+exit 0

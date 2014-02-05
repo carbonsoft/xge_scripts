@@ -23,9 +23,15 @@ copy_kernel_module() {
 }
 
 insert_kernel_module() {
-	lsmod | grep -wq pptp && return 0
-	depmod -a
-	modprobe -f pptp
+	if ! lsmod | grep -wq pptp; then
+		depmod -a
+		# стартуем чтобы загрузить модули, не более.
+		# заставили эти чёртовы менеджеры, я бы разобрался как модпробить через kernel/proc
+		/usr/local/sbin/$PROG -c $config -p  /var/run/$PROG.pid -d
+		usleep 100000
+		kill -KILL `pidof $PROG` &>/dev/null
+		modprobe -f pptp
+	fi
 }
 
 start() {
@@ -55,7 +61,7 @@ stop() {
 		for i in {1..100}; do
 		    [ ! -d /proc/$pid ] && break
 		    echo -n .
-		    usleep $((100000))
+		    usleep 100000
 		done
 	fi
 	kill -KILL `pidof $PROG` &>/dev/null

@@ -37,6 +37,11 @@ gen_radius_config() {
 	tmpltfile=/etc/radiusclient/radiusclient.conf.tmplt
 
 	genconfig
+
+	conffile=/etc/raddb/radiusd.conf
+	tmpltfile=/etc/raddb/radiusd.conf.tmplt
+
+	genconfig
 }
 
 gen_hosts_file() {

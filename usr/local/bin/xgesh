@@ -1,0 +1,82 @@
+#!/bin/bash
+#set >/tmp/1.log
+#set -eux
+#TODO: flock
+#TODO: transparent ipset
+#TODO: transparent iptables
+#TODO: transparent tc
+#TODO: transparent ip
+
+die(){
+	echo -e "Reply-Message = \"DONE $@\""
+	exit $2
+}
+
+#ip xge_forward add 192.168.1.1 
+#ip xge_snat add 192.168.1.1 2.2.2.2
+#ip xge_redirect add 192.168.1.1
+#ip mark88 add 192.168.1.1
+
+#policy set 192.168.1.1 in 10000 20000 12000 out 10000 20000 12000
+
+
+
+# filter create fw_999 src-list drop
+
+
+# filter create fw_999 src-list drop
+# nat create fw_999 src-list snat
+# nat create fw_999 src-list redirect
+
+# ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
+
+snat_tree_add() {
+	iptables -t nat -I xge_postrouting -s $1 -j SNAT --to-source $2
+}
+
+snat_tree_del() {
+	while iptables -t nat -D xge_postrouting -s $1 -j SNAT --to-source $2; do
+		: 
+	done
+}
+
+ip() {
+	local list="$1"
+	local action="$2"
+	local ip="$3"
+
+	[ "${list:0:4}" != "xge_" ] && list=xge_$list
+
+	if  [ "$#" -gt '4' -a "$list" = 'xge_snat' ]; then
+		snatip=$4
+		snat_tree_del "$3" "$4"
+		[ "$action" = 'add' ] && snat_tree_add "$3" "$4"
+		return 0
+	fi
+
+	ipset $action $list $ip
+}
+
+main() {
+	cmd=$1
+	shift
+	case $cmd in
+	ip | filter | nat | mangle )
+		$cmd $@
+		;;
+	* )
+		die "Bad command " 1
+		return 1
+		;;
+	esac
+}
+
+main $@
+
+#TODO flock timeout 10s
+
+echo -e "Reply-Message = \"DONE $@\""
+exit 0
+#set > /tmp/oppa_oppa
+#echo -e "Error-Cause = Residual-Context-Removed"
+#exit 0
