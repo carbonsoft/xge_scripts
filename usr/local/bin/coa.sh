@@ -8,6 +8,7 @@ REPLY="$( . /usr/local/bin/xgesh $@ 2>&1 )"
 ERR=$?
 REPLY="${REPLY//$n/ }"
 REPLY="${REPLY//  / }"
+REPLY="${REPLY//\"/}"
 echo -e "Reply-Message = \"$REPLY (ERR: $ERR)\""
 echo "$0[$$]: $@ REPLY: $REPLY (ERR: $ERR)" >> $LOGFILE
 exit 0
