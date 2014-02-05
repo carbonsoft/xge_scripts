@@ -39,13 +39,13 @@ die(){
 # ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
 
 snat_tree_add() {
-	iptables -t nat -I xge_postrouting -s $1 -j SNAT --to-source $2
+	iptables -t nat -I xge_postrouting -s $1 -j SNAT --to-source $2 || return 1
 }
 
 snat_tree_del() {
 	while iptables -t nat -D xge_postrouting -s $1 -j SNAT --to-source $2; do
 		: 
-	done
+	done 2>/dev/null
 }
 
 __ipset() {
@@ -69,8 +69,10 @@ ip() {
 	if  [ "$#" -ge '4' -a "$list" = 'xge_snat' ]; then
 		snatip=$4
 		snat_tree_del "$3" "$4"
-		[ "$action" = 'add' ] && snat_tree_add "$3" "$4"
-		return 0
+		if [ "$action" = 'add' ]; then
+			snat_tree_add "$3" "$4"
+			return $?
+		fi
 	fi
 
 	__ipset $action $list $ip
