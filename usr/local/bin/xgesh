@@ -1,4 +1,7 @@
 #!/bin/bash
+
+export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
+
 #set >/tmp/1.log
 #set -eux
 #TODO: flock
@@ -6,10 +9,15 @@
 #TODO: transparent iptables
 #TODO: transparent tc
 #TODO: transparent ip
+#TODO: trap EXIT _exit 
+# _exit()
+
 
 die(){
-	echo -e "Reply-Message = \"DONE $@\""
-	exit $2
+	err="$1"
+	shift
+	echo "$@"
+	exit $err
 }
 
 #ip xge_forward add 192.168.1.1 
@@ -40,21 +48,32 @@ snat_tree_del() {
 	done
 }
 
+__ipset() {
+	# echo -n \'PATH=$PATH\'' '
+	if [ "$1" = 'add' ]; then
+		ipset -q test $2 $3 && echo " $3 already in $2 " || ipset $@
+		return 0
+	fi
+
+	ipset $@
+}
+
 ip() {
 	local list="$1"
 	local action="$2"
 	local ip="$3"
 
+	echo $FUNCNAME $@
 	[ "${list:0:4}" != "xge_" ] && list=xge_$list
 
-	if  [ "$#" -gt '4' -a "$list" = 'xge_snat' ]; then
+	if  [ "$#" -ge '4' -a "$list" = 'xge_snat' ]; then
 		snatip=$4
 		snat_tree_del "$3" "$4"
 		[ "$action" = 'add' ] && snat_tree_add "$3" "$4"
 		return 0
 	fi
 
-	ipset $action $list $ip
+	__ipset $action $list $ip
 }
 
 main() {
@@ -65,18 +84,10 @@ main() {
 		$cmd $@
 		;;
 	* )
-		die "Bad command " 1
+		die 1 "Bad command $cmd $@"
 		return 1
 		;;
 	esac
 }
 
 main $@
-
-#TODO flock timeout 10s
-
-echo -e "Reply-Message = \"DONE $@\""
-exit 0
-#set > /tmp/oppa_oppa
-#echo -e "Error-Cause = Residual-Context-Removed"
-#exit 0

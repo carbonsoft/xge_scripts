@@ -2,7 +2,7 @@
 
 exec coa {
 	wait = yes
-	program = "/usr/local/bin/xgesh %{User-Name} %{Filter-Id}"
+	program = "/usr/bin/sudo /usr/local/bin/coa.sh %{Filter-Id}"
 	input_pairs = request
 	output_pairs = reply
 }
