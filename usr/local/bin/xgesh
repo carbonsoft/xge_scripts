@@ -26,6 +26,7 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 
 TAB_FILE="/var/lib/nas_iptab_nat.dat"
 FILE_CLASS_ID=/var/lib/class_id
+session_dir="/var/lib/xge_sessions/"
 
 die() {
 	err="$1"
@@ -41,18 +42,18 @@ update_session() {
 	shift
 	val="${@// /|}"
 	row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-	[ -s /var/lib/xge_sessions/$session_id ] && read row < /var/lib/xge_sessions/$session_id
-	read ip username snat policy redirect mac tmp <<< "$row"
+	[ -s $session_dir/$session_id ] && read row < $session_dir/$session_id
+	read ip username snat policy lists mac tmp <<< "$row"
 	ip=$session_id #hack
 	eval $var=$val
-	[ ! -d /var/lib/xge_sessions ] && mkdir -p /var/lib/xge_sessions
-	echo $ip $username $snat $policy $redirect $mac $ip > /var/lib/xge_sessions/$session_id.new
-	[ "$?" = '0' ] && mv -f /var/lib/xge_sessions/$session_id.new /var/lib/xge_sessions/$session_id
+	[ ! -d $session_dir ] && mkdir -p $session_dir
+	echo $ip $username $snat $policy $lists $mac $ip > $session_dir/$session_id.new
+	[ "$?" = '0' ] && mv -f $session_dir/$session_id.new $session_dir/$session_id
 }
 
 remove_session() {
 	#TODO: убивать всё нах (if-down / radius-coa disconnect iptables/ipset)
-	rm -f /var/lib/xge_session/$ip
+	rm -f /var/lib/$session_dir/$ip
 }
 
 new_class_id() {
@@ -146,10 +147,30 @@ snat_tree_del() {
 	update_session $1 snat -
 }
 
+session() {
+	session_info() {
+		cat $session_dir/$1
+	}
+
+	session_cmd="$1"
+	shift
+	case "$session_cmd" in
+	info )
+		session_info $@
+		;;
+	* )
+		echo "bad subcommand: $session_cmd $@"
+		return 1
+		;;
+	esac
+}
+
 __ipset() {
 	if [ "$1" = 'add' ]; then
-		ipset -q test $2 $3 && echo " $3 already in $2 " || ipset $@
-		return 0
+		if ipset -q test $2 $3; then
+			echo " $3 already in $2 "
+			return 0
+		fi
 	fi
 
 	ipset $@
@@ -187,7 +208,7 @@ main() {
 	cmd=$1
 	shift
 	case $cmd in
-	ip | filter | nat | mangle )
+	ip | filter | nat | mangle | session )
 		$cmd $@
 		;;
 	* )
