@@ -87,12 +87,12 @@ __session_var_get() {
 	shift
 	[ ! -s $session_dir/$session_id ] && return 1
 	read ip username snat policy lists mac class_id tmp < $session_dir/$session_id
-	echo ${!var}
+	local val=${!var}
+	[ "$val" = '-' ] && val=''
+	echo "$val"
 }
 
-#REFACTORING BEGIN
 # class_id_allocate $ip
-
 class_id_allocate() {
 	local ip="$1"
 	local class_id=$(ls -1 $free_shapers_dir | head -1)
@@ -153,6 +153,7 @@ __shaper_add() {
 		class_id="$(class_id_allocate $ip)"
 	fi
 
+	[ -f $free_shapers_dir/$class_id ] && mv $free_shapers_dir/$class_id $lock_shapers_dir/$class_id
 	quantum_out=$(( $ceil_out*1000/80 ));
 	[ "$quantum_out" -gt 200000 ] && quantum_out=200000
 	[ "$quantum_out" -lt 1500   ] && quantum_out=1500
@@ -179,20 +180,26 @@ __shaper_add() {
 	return $retval
 }
 
-# shaper_del $session_id
-shaper_del() {
-	#TODO: __session_var_get
-	read old_ip t t t class_id t <<< "$(fgrep -w -m 1 $IP $SAVEFILE)"
-	if [ -z $old_ip ]; then
-		echo 'мы не нашли сессию'
+# __shaper_del $session_id
+__shaper_del() {
+	local session_id="$1"
+	local ip=$session_id
+	[ -z "$ip" ] && return 1
+	local mark=$(ip2mark $ip)
+	[ -z "$mark" ] && return 2
+	local class_id="$(__session_var_get $session_id class_id)"
+	if [ -z "$class_id" ]; then
+		echo "Error: class_id for $session_id not found"
 		return 1
 	fi
+	local retval=0
 	for dev in imq0 imq1; do
-		tc filter del dev "$dev" parent "1:" prio 1 handle "$MARK" fw
-		tc qdisc  del dev "$dev"     parent "1:$class_id"
-		tc class  del dev "$dev"    classid "1:$class_id"
+		__try tc filter del dev "$dev" parent "1:" prio 1 handle "$mark" fw
+		__try tc qdisc  del dev "$dev" parent "1:$class_id"
+		__try tc class  del dev "$dev" classid "1:$class_id"
 	done
-	class_id_free $class_id
+	[ "$retval" != '0' ] && return $retval
+	class_id_free $class_id && __session_update $session_id class_id ''
 }
 #REFACTORING END
 
@@ -302,7 +309,7 @@ policy() {
 		echo $FUNCNAME $@
 		local ip="$1"
 		shift
-		# shaper del
+		__shaper_del $ip || return $?
 		[ "$?" = '0' ] && __session_update $ip policy ''
 	}
 
