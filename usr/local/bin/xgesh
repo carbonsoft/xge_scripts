@@ -9,6 +9,7 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 #TODO: transparent iptables
 #TODO: transparent tc
 #TODO: transparent ip
+#TODO: ip username snat policy lists mac class_id to some list or variable or magic to avoid dupicity
 #TODO: trap EXIT _exit
 # _exit()
 
@@ -35,7 +36,7 @@ die() {
 	exit $err
 }
 
-session_update() {
+__session_update() {
 	session_id="$1"
 	shift
 	var="$1"
@@ -48,20 +49,31 @@ session_update() {
 	[ "$val" = "" ] && val='-'
 	row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	[ -s $session_dir/$session_id ] && read row < $session_dir/$session_id
-	read ip username snat policy lists mac tmp <<< "$row"
+	read ip username snat policy lists mac class_id tmp <<< "$row"
 	ip=$session_id #hack
 	[ "$username" = '-' ] && username="S$ip"
 	eval $var='$val'
 	[ ! -d $session_dir ] && mkdir -p $session_dir
-	echo $ip $username $snat $policy $lists $mac $tmp > $session_dir/$session_id.new
+	echo $ip $username $snat $policy $lists $mac $class_id $tmp > $session_dir/$session_id.new
 	[ "$?" = '0' ] && mv -f $session_dir/$session_id.new $session_dir/$session_id
 }
 
-remove_session() {
+__session_remove() {
 	#TODO: убивать всё нах (if-down / radius-coa disconnect iptables/ipset)
 	rm -f /var/lib/$session_dir/$ip
 }
 
+__session_var_get() {
+	session_id="$1"
+	shift
+	var="$1"
+	shift
+	[ ! -s $session_dir/$session_id ] && return 1
+	read ip username snat policy lists mac class_id tmp < $session_dir/$session_id
+	echo ${!var}
+}
+
+#REFACTORING BEGIN
 new_class_id() {
 	[ ! -f $FILE_CLASS_ID ] && class_id=2000
 	read class_id t < $FILE_CLASS_ID
@@ -117,6 +129,7 @@ shaper_del() {
 		tc class  del dev "$dev"    classid "1:$class_id"
 	done
 }
+#REFACTORING END
 
 nat_chain_eval() {
 	for i in ${1//./ }; do
@@ -139,7 +152,7 @@ iptab_file_refresh() {
 
 snat_tree_add() {
 	snat_tree_del $1 $2 &>/dev/null
-	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && session_update $1 snat $2
+	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && __session_update $1 snat $2
 }
 
 snat_tree_del() {
@@ -150,12 +163,16 @@ snat_tree_del() {
 		[ -z "$OLD_NUMBER_SNAT" ] && break
 		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/}
 	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
-	session_update $1 snat ''
+	__session_update $1 snat ''
 }
 
 session() {
 	session_info() {
 		cat $session_dir/$1
+	}
+
+	session_get() {
+
 	}
 
 	session_cmd="$1"
@@ -181,16 +198,16 @@ __ipset() {
 	fi
 	ipset $@ || return $?
 	lists="$(ipset -o save -l | fgrep -w $3 | cut -d ' ' -f2 | xargs)"
-	session_update $3 lists $lists
+	__session_update $3 lists $lists
 
 }
 
 mac_set() {
-	session_update "$1" mac "$2"
+	__session_update "$1" mac "$2"
 }
 
 mac_remove() {
-	session_update "$1" mac ''
+	__session_update "$1" mac ''
 }
 
 policy() {
@@ -206,7 +223,7 @@ policy() {
 		read ceil_in rate_in burst_in tmp_in <<< "$in"
 		read ceil_out rate_out burst_out tmp_out <<< "$out"
 		# shaper_add bla bl bla
-		[ "$?" = '0' ] && session_update $ip policy "in $in out $out"
+		[ "$?" = '0' ] && __session_update $ip policy "in $in out $out"
 	}
 
 	# policy_remove 10.128.0.75
@@ -215,7 +232,7 @@ policy() {
 		local ip="$1"
 		shift
 		# shaper del
-		[ "$?" = '0' ] && session_update $ip policy ''
+		[ "$?" = '0' ] && __session_update $ip policy ''
 	}
 
 	policy_cmd="$1"
