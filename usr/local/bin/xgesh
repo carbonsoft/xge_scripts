@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
-
 #set >/tmp/1.log
 #set -eux
 #TODO: flock
@@ -12,20 +10,27 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 #TODO: trap EXIT _exit 
 # _exit()
 
+# examples
+#ip xge_forward add 192.168.1.1 
+#ip xge_snat add 192.168.1.1 2.2.2.2
+#ip xge_redirect add 192.168.1.1
+#ip mark88 add 192.168.1.1
+#filter create fw_999 src-list drop
+#filter create fw_999 src-list drop
+#nat create fw_999 src-list snat
+#nat create fw_999 src-list redirect
+#policy set 192.168.1.1 in 10000 20000 12000 out 10000 20000 12000
+# ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
 
-die(){
+export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
+TAB_FILE="/var/lib/nas_iptab_nat.dat"
+
+die() {
 	err="$1"
 	shift
 	echo "$@"
 	exit $err
 }
-
-#ip xge_forward add 192.168.1.1 
-#ip xge_snat add 192.168.1.1 2.2.2.2
-#ip xge_redirect add 192.168.1.1
-#ip mark88 add 192.168.1.1
-
-#policy set 192.168.1.1 in 10000 20000 12000 out 10000 20000 12000
 
 nat_chain_eval() {
 	for i in ${1//./ }; do
@@ -37,25 +42,29 @@ nat_chain_eval() {
 	echo "xge_user2snat_${a}_${b}"
 }
 
-# filter create fw_999 src-list drop
-
-
-# filter create fw_999 src-list drop
-# nat create fw_999 src-list snat
-# nat create fw_999 src-list redirect
-
-# ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
-
-snat_tree_add() {
-	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2
+iptab_file_refresh(){
+	if [ ! -f "$TAB_FILE" ] || [ $(($(date +%s) - $(stat -c %Y "$TAB_FILE"))) -gt 5 ]; then
+		iptables -t nat -nL --line | fgrep SNAT > $TAB_FILE
+		grep "NAT" $TAB_FILE > $TAB_FILE.SNAT
+	else
+		echo SKIP snat file refresh
+	fi 
 }
 
 snat_tree_del() {
-	while iptables -t nat -D $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2; do
-		: 
-	done 2>/dev/null
+	iptab_file_refresh
+	NAT_CHAIN=$(nat_chain_eval $1)
+	iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source $2 &>/dev/null
+	while read OLD_NUMBER_SNAT t t t t t to t; do
+		[ -z "$OLD_NUMBER_SNAT" ] && break
+		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/} &>/dev/null
+	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
 }
 
+snat_tree_add() {
+	snat_tree_del $1 $2 &>/dev/null
+	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2
+}
 __ipset() {
 	# echo -n \'PATH=$PATH\'' '
 	if [ "$1" = 'add' ]; then
