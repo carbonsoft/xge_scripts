@@ -11,6 +11,7 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 #TODO: transparent ip
 #TODO: ip username snat policy lists mac class_id to some list or variable or magic to avoid dupicity
 #TODO: trap EXIT _exit
+#TODO: rotate class id [ ! -f $FILE_CLASS_ID ] && class_id=2000
 # _exit()
 
 # examples
@@ -26,8 +27,23 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 # ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
 
 TAB_FILE="/var/lib/nas_iptab_nat.dat"
-FILE_CLASS_ID=/var/lib/class_id
+FILE_CLASS_ID=/var/lib/xge_class_id.tc
 session_dir="/var/lib/xge_sessions/"
+shapers_dir="/var/lib/xge_shapers"
+free_shapers_dir="$shapers_dir/free"
+lock_shapers_dir="$shapers_dir/lock"
+
+lists_prepare() {
+	for f in {2001..8998}; do
+		touch $free_shapers_dir/$f
+	done
+}
+
+prepare() {
+	for dir in $session_dir $free_shapers_dir $lock_shapers_dir; do
+		[ ! -d $dir ] && mkdir -p $dir
+	done
+}
 
 die() {
 	err="$1"
@@ -63,6 +79,7 @@ __session_remove() {
 	rm -f /var/lib/$session_dir/$ip
 }
 
+# __session_var_get session_id var
 __session_var_get() {
 	session_id="$1"
 	shift
@@ -74,50 +91,97 @@ __session_var_get() {
 }
 
 #REFACTORING BEGIN
-new_class_id() {
-	[ ! -f $FILE_CLASS_ID ] && class_id=2000
-	read class_id t < $FILE_CLASS_ID
-	((class_id++))
-	while cut -d ' ' -f5 $FILE_CLASS_ID | fgrep -qw -m1 $class_id; do
-		((class_id++))
-	done
-	echo $class_id > $FILE_CLASS_ID
+# class_id_allocate $ip
+
+class_id_allocate() {
+	local ip="$1"
+	local class_id=$(ls -1 $free_shapers_dir | head -1)
+	if [ -z "$class_id" ]; then
+		if [ -z "$(ls -1 $lock_shapers_dir)" ]; then
+			lists_prepare
+			class_id=$(ls -1 $free_shapers_dir | head -1)
+		else
+			echo "Error: No free class_id left" >&2
+			return 1
+		fi
+	fi
+	mv -f $free_shapers_dir/$class_id $lock_shapers_dir/$class_id || return 1
+	echo $ip > $lock_shapers_dir/$class_id
+	echo $class_id
+}
+
+# class_id_free $class_id
+class_id_free() {
+	local class_id="$1"
+	mv -f $lock_shapers_dir/$class_id $free_shapers_dir/$class_id || return 1
+	: > $free_shapers_dir/$class_id || return 1
 }
 
 tc() {
 	/sbin/tc $@ || echo /sbin/tc $@
 }
 
-shaper_add() {
-	# soi: правило пропускалось если задана только исходящая скорость
+#ip2mark $ip
+ip2mark() {
+	[ "$#" = '0' ] && return 1
+	local ip=( ${1//./ } )
+	echo $((${ip[3]}*256*256*256+${ip[2]}*256*256+${ip[1]}*256+${ip[0]}))
+}
 
-	[ "$RATE_IN" = '-1' -a "$RATE_OUT" = '-1' ] && return 1
-	old_ip=
-	read old_ip T T T class_id T <<< "$(fgrep -w -m 1 $IP $SAVEFILE)"
-	if [ -z $old_ip ]; then
-		echo 'мы не нашли сессию'
-		new_class_id
+# __shaper_add session_id rate_in ceil_in burst_in rate_out ceil_out burst_out
+
+__try() {
+	$@ || ((retval++))
+}
+
+__shaper_add() {
+	local session_id="$1"
+	local rate_in="$2"
+	local ceil_in="$3"
+	local burst_in="$4"
+	local rate_out="$5"
+	local ceil_out="$6"
+	local burst_out="$7"
+	local class_id="$(__session_var_get $session_id class_id)"
+	local ip=$session_id
+	[ -z "$ip" ] && return 1
+	local mark=$(ip2mark $ip)
+	[ -z "$mark" ] && return 2
+
+	[ "$rate_in" = '-1' -a "$rate_out" = '-1' ] && return 1
+	if [ -z $class_id ]; then
+		class_id="$(class_id_allocate $ip)"
 	fi
-	#удаление
-	#rate_in, rate_out, ceil_in, ceil_out
 
-	quantum_out=$(( $CEIL_OUT*1000/80 ));
+	quantum_out=$(( $ceil_out*1000/80 ));
 	[ "$quantum_out" -gt 200000 ] && quantum_out=200000
 	[ "$quantum_out" -lt 1500   ] && quantum_out=1500
 
-	quantum_in=$(( $CEIL_IN*1000/80 ));
+	quantum_in=$(( $ceil_in*1000/80 ));
 	[ "$quantum_in" -gt 200000 ] && quantum_in=200000
 	[ "$quantum_in" -lt 1500   ] && quantum_in=1500
 
-	tc filter replace dev imq0 parent 1: protocol ip prio 1 handle $MARK fw classid 1:$class_id
-	tc filter replace dev imq1 parent 1: protocol ip prio 1 handle $MARK fw classid 1:$class_id
-	tc class replace dev imq0 parent 1:1 classid 1:$class_id htb rate ${RATE_OUT}kbit ceil ${CEIL_OUT}kbit prio 2 quantum $quantum_out
-	tc class replace dev imq1 parent 1:1 classid 1:$class_id htb rate ${RATE_IN}kbit  ceil ${CEIL_IN}kbit  prio 2 quantum $quantum_in
-	tc qdisc replace dev imq0 parent 1:$class_id handle $class_id: pfifo
-	tc qdisc replace dev imq1 parent 1:$class_id handle $class_id: pfifo
+	local retval=0
+	__try tc filter replace dev imq0 parent 1: protocol ip prio 1 handle $mark fw classid 1:$class_id
+	__try tc filter replace dev imq1 parent 1: protocol ip prio 1 handle $mark fw classid 1:$class_id
+	__try tc class replace dev imq0 parent 1:1 classid 1:$class_id htb rate ${rate_out}kbit ceil ${ceil_out}kbit prio 2 quantum $quantum_out
+	__try tc class replace dev imq1 parent 1:1 classid 1:$class_id htb rate ${rate_in}kbit  ceil ${ceil_in}kbit  prio 2 quantum $quantum_in
+	__try tc qdisc replace dev imq0 parent 1:$class_id handle $class_id: pfifo
+	__try tc qdisc replace dev imq1 parent 1:$class_id handle $class_id: pfifo
+
+	if [ "$retval" -gt '0' ]; then
+		class_id_free $class_id
+		return $retval
+	fi
+
+	__session_update $session_id class_id $class_id
+
+	return $retval
 }
 
+# shaper_del $session_id
 shaper_del() {
+	#TODO: __session_var_get
 	read old_ip t t t class_id t <<< "$(fgrep -w -m 1 $IP $SAVEFILE)"
 	if [ -z $old_ip ]; then
 		echo 'мы не нашли сессию'
@@ -128,6 +192,7 @@ shaper_del() {
 		tc qdisc  del dev "$dev"     parent "1:$class_id"
 		tc class  del dev "$dev"    classid "1:$class_id"
 	done
+	class_id_free $class_id
 }
 #REFACTORING END
 
@@ -171,10 +236,6 @@ session() {
 		cat $session_dir/$1
 	}
 
-	session_get() {
-
-	}
-
 	session_cmd="$1"
 	shift
 	case "$session_cmd" in
@@ -216,14 +277,24 @@ policy() {
 		echo $FUNCNAME $@
 		local ip="$1"
 		shift
+
 		params="$@"
 		in=${params##*in }
 		in=${in%% out*}
 		out=${params##*out }
-		read ceil_in rate_in burst_in tmp_in <<< "$in"
-		read ceil_out rate_out burst_out tmp_out <<< "$out"
-		# shaper_add bla bl bla
-		[ "$?" = '0' ] && __session_update $ip policy "in $in out $out"
+
+		read rate_in ceil_in burst_in tmp_in <<< "$in"
+		read rate_out ceil_out burst_out tmp_out <<< "$out"
+
+		rate_in=${rate_in:-512}
+		ceil_in=${ceil_in:-$rate_in}
+		burst_in=${burst_in:-0}
+		rate_out=${rate_out:-512}
+		ceil_out=${ceil_out:-$rate_out}
+		burst_out=${burst_out:-0}
+
+		__shaper_add $ip $rate_in $ceil_in $burst_in $rate_out $ceil_out $burst_out
+		[ "$?" = '0' ] && __session_update $ip policy "in $rate_in $ceil_in $burst_in out $rate_out $ceil_out $burst_out"
 	}
 
 	# policy_remove 10.128.0.75
@@ -267,6 +338,7 @@ ip() {
 }
 
 main() {
+	prepare
 	cmd=$1
 	shift
 	case $cmd in
