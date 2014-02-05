@@ -132,7 +132,7 @@ iptab_file_refresh() {
 
 snat_tree_add() {
 	snat_tree_del $1 $2 &>/dev/null
-	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2
+	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && update_session $1 snat $2
 }
 
 snat_tree_del() {
@@ -143,16 +143,24 @@ snat_tree_del() {
 		[ -z "$OLD_NUMBER_SNAT" ] && break
 		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/}
 	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
+	update_session $1 snat -
 }
 
 __ipset() {
-	# echo -n \'PATH=$PATH\'' '
 	if [ "$1" = 'add' ]; then
 		ipset -q test $2 $3 && echo " $3 already in $2 " || ipset $@
 		return 0
 	fi
 
 	ipset $@
+}
+
+mac_set() {
+	update_session "$1" mac "$2"
+}
+
+mac_remove() {
+	update_session "$1" mac -
 }
 
 ip() {
