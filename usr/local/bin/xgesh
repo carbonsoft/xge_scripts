@@ -27,7 +27,15 @@ die(){
 
 #policy set 192.168.1.1 in 10000 20000 12000 out 10000 20000 12000
 
-
+nat_chain_eval() {
+	for i in ${1//./ }; do
+		x=$((num<<8))
+		num=$((x|i))
+	done
+	(( a=num & 15 ))
+	(( b=(num & 240) >> 4 ))
+	echo "xge_user2snat_${a}_${b}"
+}
 
 # filter create fw_999 src-list drop
 
@@ -39,11 +47,11 @@ die(){
 # ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
 
 snat_tree_add() {
-	iptables -t nat -I xge_postrouting -s $1 -j SNAT --to-source $2 || return 1
+	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2
 }
 
 snat_tree_del() {
-	while iptables -t nat -D xge_postrouting -s $1 -j SNAT --to-source $2; do
+	while iptables -t nat -D $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2; do
 		: 
 	done 2>/dev/null
 }
