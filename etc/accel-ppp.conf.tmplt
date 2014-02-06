@@ -31,7 +31,8 @@ pppd_compat
 
 [core]
 log-error=/var/log/accel-ppp/core.log
-thread-count=4
+# thread-count=4
+thread-count=1
 
 [common]
 #single-session=replace
@@ -142,7 +143,7 @@ gw-ip-address=@@@ppp_server_ip%%%
 #server=127.0.0.1,testing123 (obsolete)
 server=@@@authserver_ip%%%,@@@secret%%%,auth-port=@@@authserver_port%%%,acct-port=0,req-limit=100,fail-time=0
 server=@@@acctserver_ip%%%,@@@secret%%%,auth-port=0,acct-port=@@@acctserver_port%%%,req-limit=100,fail-time=0
-dae-server=127.0.0.1:3799,testing123
+# dae-server=127.0.0.1:3799,testing123
 verbose=1
 #timeout=3
 #max-try=3
@@ -152,6 +153,7 @@ verbose=1
 
 [client-ip-range]
 192.168.0.0/16
+10.90.0.0/16
 
 [ip-pool]
 gw-ip-address=@@@ppp_server_ip%%%

@@ -23,24 +23,29 @@ genconfig() {
 
 gen_radius_config() {
 	# radiusclient и servers
-	acctserver="${radclient[acctserver]}"
-	authserver="${radclient[authserver]}"
+	acctserver="${radclient['acctserver']}"
+	authserver="${radclient['authserver']}"
 	server_ip=${authserver%%:*}
-	secret="${radclient[secret]}"
-	nas_identifier="${radclient[nas_identifier]}"
+	secret="${radclient['secret']}"
+	nas_identifier="${radclient['nas_identifier']}"
+	coa_client_ip="${radclient['coa_client.ip']}"
+	coa_server_port="${radclient['coa_server.port']:-3799}"
+	coa_client_passwd="${radclient['coa_client.passwd']}"
 
 	conffile=/etc/radiusclient/servers
 	tmpltfile=/skelet/etc/radiusclient/servers.tmplt
-
 	genconfig
+
 	conffile=/etc/radiusclient/radiusclient.conf
 	tmpltfile=/skelet/etc/radiusclient/radiusclient.conf.tmplt
-
 	genconfig
 
 	conffile=/etc/raddb/radiusd.conf
 	tmpltfile=/skelet/etc/raddb/radiusd.conf.tmplt
+	genconfig
 
+	conffile=/etc/raddb/clients.conf
+	tmpltfile=/skelet/etc/raddb/clients.conf.tmplt
 	genconfig
 }
 

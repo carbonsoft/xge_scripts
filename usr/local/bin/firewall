@@ -58,7 +58,9 @@ xge_filter() {
 	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
 
 	# radius coa, TODO fix range
-	iptables -t filter -A xge_in_accept -p udp --dport 1815 -j ACCEPT
+	if [ -n "${radclient['coa_client.ip']}" -a -n "${radclient['coa_server.port']}" ]; then
+		iptables -t filter -A xge_in_accept -s "${radclient['coa_client.ip']}" -p udp --dport "${radclient['coa_server.port']}" -j ACCEPT
+	fi
 
 	iptables -t filter -I INPUT -j xge_in_accept
 }

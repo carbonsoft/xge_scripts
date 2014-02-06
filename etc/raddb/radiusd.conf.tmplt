@@ -324,7 +324,7 @@ max_requests = 1024
 listen {
         type = coa
         ipaddr = *
-        port = 1815
+        port = @@@coa_server_port%%%
 	server = coa
 }
 
