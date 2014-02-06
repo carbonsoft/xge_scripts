@@ -184,9 +184,9 @@ level=3
 
 [pppd-compat]
 #ip-pre-up=/etc/ppp/ip-pre-up
-ip-up=/etc/ppp/ip-up
-ip-down=/etc/ppp/ip-down
-ip-change=/etc/ppp/ip-change
+ip-up=/usr/local/bin/ip-up
+ip-down=/usr/local/bin/ip-down
+ip-change=/usr/local/bin/ip-change
 radattr-prefix=/var/run/radattr
 verbose=1
 

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+while read cmd data; do
+	[ "$cmd" = 'Filter-Id' ] && xgesh $data
+done < /var/run/radattr.$1

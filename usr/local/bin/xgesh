@@ -224,6 +224,7 @@ iptab_file_refresh() {
 
 snat_tree_add() {
 	snat_tree_del $1 $2 &>/dev/null
+	[ -z "$2" -o "$2" = '0.0.0.0' ] && return 0
 	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && __session_update $1 snat $2
 }
 
@@ -329,6 +330,8 @@ policy() {
 ip() {
 	local list="$1"
 	local action="$2"
+	[ "$action" = '1' ] && action='add'
+	[ "$action" = '0' ] && action='del'
 	local ip="$3"
 	echo "$FUNCNAME $@"
 	[ "${list:0:4}" != "xge_" ] && list=xge_$list
