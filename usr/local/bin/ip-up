@@ -1,5 +1,15 @@
 #!/bin/bash
 
+[ ! -d /var/log/xge/ ] && mkdir /var/log/xge/
 while read cmd data; do
-	[ "$cmd" = 'Filter-Id' ] && xgesh $data
-done < /var/run/radattr.$1
+	if [ "$cmd" = 'Filter-Id' ]; then
+		PARAMS="$data"
+		PARAMS=${PARAMS//Framed-IP-Address/$5}
+		echo
+		if xgesh $PARAMS 2>&1; then
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: $PARAMS [   OK   ]"
+		else
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: $PARAMS [ FAILED ]"
+		fi
+	fi
+done < /var/run/radattr.$1 >> /var/log/xge/ip-up.log
