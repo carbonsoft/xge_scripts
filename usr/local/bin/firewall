@@ -10,11 +10,43 @@ usersd=/usr/local/sbin/firewall_usersd
 qos=/usr/local/bin/shaper.sh
 
 xge_nat() {
-	# создаем дерево для nat
+	NAT_DROP=" DNAT --to-dest 169.169.169.169"
 	iptables -t nat -N xge_postrouting
-	iptables -t nat -A POSTROUTING -j xge_postrouting
 	iptables -t nat -N xge_user2snat
 	iptables -t nat -A xge_postrouting -j xge_user2snat
+
+	# dnat
+	iptables -t nat -N xge_dnat
+	iptables -t nat -N xge_redirect
+	iptables -t nat -N xge_redirect_noauth
+	iptables -t nat -N xge_redirect_webauth
+
+	# redirect
+	iptables -t nat -A xge_redirect -p tcp -m addrtype --dst-type LOCAL -j RETURN
+	iptables -t nat -A xge_redirect -p udp --dport 53 -j RETURN
+	iptables -t nat -A xge_redirect -p tcp --dport 80 -j DNAT --to-dest ${network['if1.ip']%%/*}:${httpd['redirect_port']}
+	iptables -t nat -A xge_redirect -j $NAT_DROP
+
+	# noauth
+	iptables -t nat -A xge_redirect_noauth -p tcp -m addrtype --dst-type LOCAL -j RETURN
+	iptables -t nat -A xge_redirect_noauth -p udp --dport 53 -j RETURN
+	iptables -t nat -A xge_redirect_noauth -p tcp --dport 80 -j DNAT --to-dest ${network['if1.ip']%%/*}:${httpd['redirect_noauth_port']}
+	iptables -t nat -A xge_redirect_noauth -j $NAT_DROP
+
+	# webauth
+	iptables -t nat -A xge_redirect_webauth -p tcp -m addrtype --dst-type LOCAL -j RETURN
+	iptables -t nat -A xge_redirect_webauth -p udp --dport 53 -j RETURN
+	iptables -t nat -A xge_redirect_webauth -p tcp --dport 80 -j DNAT --to-dest ${network['if1.ip']%%/*}:${httpd['redirect_webauth_port']}
+	iptables -t nat -A xge_redirect_webauth -j $NAT_DROP
+
+	# links in xge_dnat
+	iptables -t nat -A xge_dnat -m set --set xge_redirect src  -j xge_redirect
+	iptables -t nat -A xge_dnat -m set --set xge_redirect_noauth src -j xge_redirect_noauth
+	iptables -t nat -A xge_dnat -m set --set xge_redirect_webauth src -j xge_redirect_webauth
+
+	# final link
+	iptables -t nat -A PREROUTING -j xge_dnat
+	iptables -t nat -A POSTROUTING -j xge_postrouting
 
 	iptables_file=/tmp/iptables_file.nat.$$
 	echo "#" > $iptables_file
@@ -31,7 +63,9 @@ xge_ipset() {
 	ipset create xge_forward_deny iphash
 	ipset create xge_mangle_accept iphash
 	ipset create xge_nat_default iphash
-	ipset create xge_nat_negbal iphash
+	ipset create xge_redirect iphash
+	ipset create xge_redirect_noauth iphash
+	ipset create xge_redirect_webauth iphash
 }
 
 xge_filter() {
@@ -40,6 +74,7 @@ xge_filter() {
 	iptables -t filter -A FORWARD -j xge_forward
 	iptables -t filter -N xge_ULOGd
 	iptables -t filter -A xge_ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
+	iptables -t filter -A xge_forward -d 169.169.169.169 -j REJECT --reject-with icmp-admin-prohibited
 	iptables -t filter -A xge_forward -m set --set xge_forward_allow src -j xge_ULOGd
 	iptables -t filter -A xge_forward -m set --set xge_forward_allow dst -j xge_ULOGd
 	iptables -t filter -A xge_forward -m set --set xge_forward_allow src -j ACCEPT
