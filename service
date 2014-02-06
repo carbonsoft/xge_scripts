@@ -9,6 +9,7 @@ start() {
 	retval=0
 	__exec /genconfig
 	__exec /usr/local/bin/firewall start 
+	__exec /etc/init.d/httpd start
 	__exec /etc/init.d/carbon_coad start
 	__exec /etc/init.d/radiusd start
 	__exec /etc/init.d/accel-pppd start
@@ -19,6 +20,7 @@ start() {
 stop() {
 	local retval=0
 	__exec /usr/local/bin/firewall stop
+	__exec /etc/init.d/httpd stop
 	__exec /etc/init.d/carbon_coad stop
 	__exec /etc/init.d/radiusd stop
 	__exec /etc/init.d/accel-pppd stop
