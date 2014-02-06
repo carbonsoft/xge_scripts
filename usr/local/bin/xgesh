@@ -234,7 +234,7 @@ snat_tree_del() {
 	iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source $2 &>/dev/null
 	while read OLD_NUMBER_SNAT t t t t t to t; do
 		[ -z "$OLD_NUMBER_SNAT" ] && break
-		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/}
+		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/} 2>/dev/null
 	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
 	__session_update $1 snat ''
 }
