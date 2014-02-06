@@ -50,7 +50,7 @@ gen_radius_config() {
 }
 
 gen_hosts_file() {
-	app_ip=${app[ppp-server-ip]%%/*}
+	app_ip=${app[ppp-server.ip]%%/*}
 	host_name=$(hostname)
 	conffile=/etc/hosts
 	tmpltfile=/skelet/etc/hosts.tmplt
@@ -83,7 +83,37 @@ gen_accel_pppd_config() {
 	genconfig
 }
 
+gen_httpd_config() {
+	conffile=/etc/httpd/conf/httpd.conf
+	tmpltfile=/skelet/etc/httpd/conf/httpd.conf.tmplt
+	internal_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['internal_port']}"
+	redirect_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['redirect_port']}"
+	noauth_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['redirect_noauth_port']}"
+	webauth_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['redirect_webauth_port']}"
+	genconfig
+
+	# redirect part
+	URL="${httpd['redirect_page']}"
+	conffile="/var/www/html/redirect/.htaccess"
+	tmpltfile="/var/www/html/redirect/.htaccess.tmplt"
+	genconfig
+
+	# noauth part
+	URL="${httpd['redirect_noauth_page']}"
+	conffile="/var/www/html/noauth/.htaccess"
+	tmpltfile="/var/www/html/noauth/.htaccess.tmplt"
+	genconfig
+
+	# webauth part
+	URL="${httpd['redirect_webauth_page']}"
+	conffile="/var/www/html/webauth/.htaccess"
+	tmpltfile="/var/www/html/webauth/.htaccess.tmplt"
+	genconfig
+}
+
+
 main() {
+	gen_httpd_config
 	gen_accel_pppd_config
 	gen_radius_config
 	gen_hosts_file
