@@ -30,16 +30,16 @@ gen_radius_config() {
 	nas_identifier="${radclient[nas_identifier]}"
 
 	conffile=/etc/radiusclient/servers
-	tmpltfile=/etc/radiusclient/servers.tmplt
+	tmpltfile=/skelet/etc/radiusclient/servers.tmplt
 
 	genconfig
 	conffile=/etc/radiusclient/radiusclient.conf
-	tmpltfile=/etc/radiusclient/radiusclient.conf.tmplt
+	tmpltfile=/skelet/etc/radiusclient/radiusclient.conf.tmplt
 
 	genconfig
 
 	conffile=/etc/raddb/radiusd.conf
-	tmpltfile=/etc/raddb/radiusd.conf.tmplt
+	tmpltfile=/skelet/etc/raddb/radiusd.conf.tmplt
 
 	genconfig
 }
@@ -48,14 +48,14 @@ gen_hosts_file() {
 	app_ip=${app[ppp-server-ip]%%/*}
 	host_name=$(hostname)
 	conffile=/etc/hosts
-	tmpltfile=/etc/hosts.tmplt
+	tmpltfile=/skelet/etc/hosts.tmplt
 
 	genconfig
 }
 
 gen_accel_pppd_config() {
 	conffile=/etc/accel-ppp.conf
-	tmpltfile=/etc/accel-ppp.conf.tmplt
+	tmpltfile=/skelet/etc/accel-ppp.conf.tmplt
 	acctserver="${radclient[acctserver]}"
 	authserver="${radclient[authserver]}"
 	acctserver_ip=${acctserver%%:*}
