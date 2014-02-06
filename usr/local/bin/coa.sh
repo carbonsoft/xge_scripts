@@ -1,10 +1,12 @@
 #!/bin/bash
 
+PARAMS="$@"
+PARAMS=${PARAMS//Framed-IP-Address/$FRAMED_IP_ADDRESS}
 n=$'\n'
-LOGFILE="/var/log/coa/coa.log"
-[ -d /var/log/coa/ ] || mkdir -p /var/log/coa/
-echo "$0[$$]: $@" >> $LOGFILE
-REPLY="$( . /usr/local/bin/xgesh $@ 2>&1 )"
+LOGFILE="/var/log/xge/coa.log"
+[ ! -d /var/log/xge/ ] && mkdir -p /var/log/xge/
+echo "$0[$$]: $PARAMS" >> $LOGFILE
+REPLY="$( . /usr/local/bin/xgesh $PARAMS 2>&1 )"
 ERR=$?
 REPLY="${REPLY//$n/ }"
 REPLY="${REPLY//  / }"
