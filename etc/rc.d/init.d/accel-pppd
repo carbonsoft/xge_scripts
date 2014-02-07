@@ -27,6 +27,7 @@ insert_kernel_module() {
 		depmod -a
 		# стартуем чтобы загрузить модули, не более.
 		# заставили эти чёртовы менеджеры, я бы разобрался как модпробить через kernel/proc
+		[ ! -d /var/log/accel-ppp/ ] && mkdir -p /var/log/accel-ppp/
 		/usr/local/sbin/$PROG -c $config -p  /var/run/$PROG.pid -d
 		usleep 100000
 		kill -KILL `pidof $PROG` &>/dev/null
@@ -40,6 +41,7 @@ start() {
 	[ -s /var/run/$PROG.pid ] && return 0
 	copy_kernel_module
 	insert_kernel_module
+	[ ! -d /var/log/accel-ppp/ ] && mkdir -p /var/log/accel-ppp/
 	/usr/local/sbin/$PROG -c $config -p  /var/run/$PROG.pid -d
 	RETVAL=$?
 	pid=$!
