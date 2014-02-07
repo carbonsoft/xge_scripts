@@ -59,13 +59,13 @@ xge_nat() {
 
 # стандартные ipset'ы разрешить/запретить инет
 xge_ipset() {
-	ipset create xge_forward_allow iphash
-	ipset create xge_forward_deny iphash
-	ipset create xge_mangle_accept iphash
-	ipset create xge_nat_default iphash
-	ipset create xge_redirect iphash
-	ipset create xge_redirect_noauth iphash
-	ipset create xge_redirect_webauth iphash
+	ipset create xge_forward_allow hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_forward_deny hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_mangle_accept hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_nat_default hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_redirect hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_redirect_noauth hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_redirect_webauth hash:ip family inet hashsize 65536 maxelem 65536
 }
 
 xge_filter() {
