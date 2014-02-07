@@ -46,6 +46,8 @@ session_dir="/var/lib/xge_sessions/"
 shapers_dir="/var/lib/xge_shapers"
 free_shapers_dir="$shapers_dir/free"
 lock_shapers_dir="$shapers_dir/lock"
+exec 20>/tmp/xge_iptables.lock
+exec 21>/tmp/xge_class_id_allocate.lock
 
 lists_prepare() {
 	for f in {2001..8998}; do
@@ -65,6 +67,50 @@ die() {
 	echo "$@"
 	exit $err
 }
+
+iptables() {
+	if ! flock -x -w 30 20; then
+		echo 'Some iptables get my locker'
+		rm -f /tmp/xge_iptables.lock
+		exec 20>/tmp/xge_iptables.lock
+		flock -x -w 5 20
+	fi
+
+	while true; do
+		/sbin/iptables "$@"
+		[ "$?" != '4' ] && break # EINVAL CYCLE
+		echo -n 'WARN: iptables EINVAL'
+	done
+
+	flock -u 20
+}
+
+
+__class_id_lock() {
+	if ! flock -x -w 5 21; then
+		echo 'Some class_id get my locker'
+		rm -f /tmp/class_id_allocate.lock
+		exec 21>/tmp/class_id_allocate.lock
+		flock -x -w 5 21
+	fi
+}
+__class_id_unlock() {
+	flock -u 21
+}
+
+__session_id_lock() {
+	if ! flock -x -w 5 22; then
+		echo "Some session $session_lock get my locker"
+		rm -f $session_lock
+		exec 22>$session_lock
+		flock -x -w 5 22
+	fi
+}
+__session_id_unlock() {
+	flock -u 22
+	rm -f $session_lock
+}
+
 
 session() {
 	session_cmd="$1"
@@ -177,19 +223,23 @@ __policy_remove() {
 # __class_id_allocate $ip
 __class_id_allocate() {
 	local ip="$1"
+	__class_id_lock
 	local class_id=$(ls -1 $free_shapers_dir | head -1)
+
 	if [ -z "$class_id" ]; then
 		if [ -z "$(ls -1 $lock_shapers_dir)" ]; then
 			lists_prepare
 			class_id=$(ls -1 $free_shapers_dir | head -1)
 		else
 			echo "Error: No free class_id left" >&2
+			__class_id_unlock
 			return 1
 		fi
 	fi
 	mv -f $free_shapers_dir/$class_id $lock_shapers_dir/$class_id || return 1
 	echo $ip > $lock_shapers_dir/$class_id
 	echo $class_id
+	__class_id_unlock
 }
 
 # __class_id_free $class_id
@@ -226,7 +276,6 @@ __shaper_add() {
 	if [ -z $class_id ]; then
 		class_id="$(__class_id_allocate $ip)"
 	fi
-
 	[ -f $free_shapers_dir/$class_id ] && mv $free_shapers_dir/$class_id $lock_shapers_dir/$class_id
 	quantum_out=$(( $ceil_out*1000/80 ));
 	[ "$quantum_out" -gt 200000 ] && quantum_out=200000
@@ -235,7 +284,6 @@ __shaper_add() {
 	quantum_in=$(( $ceil_in*1000/80 ));
 	[ "$quantum_in" -gt 200000 ] && quantum_in=200000
 	[ "$quantum_in" -lt 1500   ] && quantum_in=1500
-
 	local retval=0
 	__try tc filter replace dev imq0 parent 1: protocol ip prio 1 handle $mark fw classid 1:$class_id
 	__try tc filter replace dev imq1 parent 1: protocol ip prio 1 handle $mark fw classid 1:$class_id
@@ -243,14 +291,12 @@ __shaper_add() {
 	__try tc class replace dev imq1 parent 1:1 classid 1:$class_id htb rate ${rate_in}kbit  ceil ${ceil_in}kbit  prio 2 quantum $quantum_in
 	__try tc qdisc replace dev imq0 parent 1:$class_id handle $class_id: pfifo
 	__try tc qdisc replace dev imq1 parent 1:$class_id handle $class_id: pfifo
-
 	if [ "$retval" -gt '0' ]; then
 		__class_id_free $class_id
 		return $retval
 	fi
 
 	__session_update $session_id class_id $class_id
-
 	return $retval
 }
 
@@ -299,15 +345,33 @@ ip() {
 
 # 	__ipset $action $list $ip
 __ipset() {
+	local session_id=$3
+	lists=$(__session_var_get $session_id lists)
 	if [ "$1" = 'add' ]; then
 		if ipset -q test $2 $3; then
 			echo " $3 already in $2 "
 			return 0
 		fi
+		ipset $@ || return $?
+		lists="|${lists}|"; lists="${lists//|$2|/|}$2"; lists=${lists/||/|}; lists=${lists#|};
+    		__session_update $3 lists ${lists//|/ }
+		return $?
 	fi
+
+	if [ "$1" = 'del' ]; then
+		if ! ipset -q test $2 $3; then
+			echo " $3 already isn't in $2 "
+			return 0
+		fi
+		ipset $@ || return $?
+		lists="|${lists}|"; lists="${lists//|$2|/|}"; lists=${lists/||/|}; lists=${lists#|};
+		__session_update $3 lists ${lists//|/ }
+		return $?
+	fi
+
 	ipset $@ || return $?
-	lists="$(ipset -o save -l | fgrep -w $3 | cut -d ' ' -f2 | xargs)"
-	__session_update $3 lists $lists
+	# долго
+	# lists="$(ipset -o save -l | fgrep -w $3 | cut -d ' ' -f2 | xargs)"
 
 }
 
@@ -323,10 +387,8 @@ __nat_chain_eval() {
 
 __snat_cache_refresh() {
 	if [ ! -f "$TAB_FILE" ] || [ $(($(date +%s) - $(stat -c %Y "$TAB_FILE"))) -gt 5 ]; then
-		iptables -t nat -nL --line | fgrep SNAT > $TAB_FILE
-		grep "NAT" $TAB_FILE > $TAB_FILE.SNAT
-	else
-		echo "SKIP ${FUNCNAME//_/ }"
+		iptables -t nat -nL --line > $TAB_FILE
+		fgrep "NAT" $TAB_FILE > $TAB_FILE.SNAT
 	fi
 }
 
@@ -383,9 +445,14 @@ main() {
 	prepare
 	cmd=$1
 	shift
+	session_lock=${@//[^0-9 .]/}
+	session_lock=/tmp/xge_${session_lock%% *}.lock
 	case $cmd in
 	ip | filter | nat | mangle | session | policy | mac )
+		exec 22>$session_lock
+		__session_id_lock
 		$cmd $@
+		__session_id_unlock
 		;;
 	* )
 		die 1 "Bad command $cmd $@"
