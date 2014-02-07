@@ -17,7 +17,7 @@ copy_kernel_module() {
 	dst_kernel_module="/lib/modules/$(uname -r)/kernel/extra/pptp.ko"
 	lsmod | grep -wq pptp && return 0
 	[ -f "$dst_kernel_module" ] && cmp "$src_kernel_module" "$dst_kernel_module" && return 0
-	mkdir "${dst_kernel_module%*/}"
+	mkdir "${dst_kernel_module%/*}"
 	cp -p "$src_kernel_module" "$dst_kernel_module"
 	depmod -a
 }
