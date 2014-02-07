@@ -12,7 +12,6 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 #TODO: ip username snat policy lists mac class_id to some list or variable or magic to avoid dupicity
 #TODO: trap EXIT _exit
 #TODO: rotate class id [ ! -f $FILE_CLASS_ID ] && class_id=2000
-# _exit()
 
 # examples
 #ip xge_forward add 192.168.1.1
@@ -25,6 +24,21 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 #nat create fw_999 src-list redirect
 #policy set 192.168.1.1 in 10000 20000 12000 out 10000 20000 12000
 # ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
+
+__exit(){
+	REZ=$?
+	return $REZ
+}
+
+trap __exit EXIT
+
+__try() {
+	if ! $@ 2>&1; then
+		echo "Error: $@ [ FAILED ]"
+		((retval++))
+		return $retval
+	fi
+}
 
 TAB_FILE="/var/lib/nas_iptab_nat.dat"
 FILE_CLASS_ID=/var/lib/xge_class_id.tc
@@ -50,6 +64,20 @@ die() {
 	shift
 	echo "$@"
 	exit $err
+}
+
+session() {
+	session_cmd="$1"
+	shift
+	case "$session_cmd" in
+	info )
+		__session_info $@
+		;;
+	* )
+		echo "bad subcommand: $session_cmd $@"
+		return 1
+		;;
+	esac
 }
 
 __session_update() {
@@ -92,8 +120,62 @@ __session_var_get() {
 	echo "$val"
 }
 
-# class_id_allocate $ip
-class_id_allocate() {
+__session_info() {
+	cat $session_dir/$1
+}
+
+policy() {
+	policy_cmd="$1"
+	shift
+	case $policy_cmd in
+	set | remove )
+		__policy_$policy_cmd $@
+		;;
+	* )
+		echo "bad subcommand: $policy_cmd $@"
+		return 1
+		;;
+	esac
+}
+
+# __policy_set 10.128.0.75 in 1000 2000 3000 out 1000 2000 3000
+__policy_set() {
+	echo ${FUNCNAME//_/ } $@
+	local ip="$1"
+	shift
+
+	params="$@"
+	in=${params##*in }
+	in=${in%% out*}
+	out=${params##*out }
+
+	read rate_in ceil_in burst_in tmp_in <<< "$in"
+	read rate_out ceil_out burst_out tmp_out <<< "$out"
+
+	rate_in=${rate_in:-512}
+	ceil_in=${ceil_in:-$rate_in}
+	burst_in=${burst_in:-0}
+	rate_out=${rate_out:-512}
+	ceil_out=${ceil_out:-$rate_out}
+	burst_out=${burst_out:-0}
+
+	__shaper_add $ip $rate_in $ceil_in $burst_in $rate_out $ceil_out $burst_out
+	[ "$?" = '0' ] && __session_update $ip policy "in $rate_in $ceil_in $burst_in out $rate_out $ceil_out $burst_out"
+}
+
+# __policy_remove 10.128.0.75
+__policy_remove() {
+	echo ${FUNCNAME//_/ } $@
+	local ip="$1"
+	shift
+	__shaper_del $ip || return $?
+	[ "$?" = '0' ] && __session_update $ip policy ''
+}
+
+
+
+# __class_id_allocate $ip
+__class_id_allocate() {
 	local ip="$1"
 	local class_id=$(ls -1 $free_shapers_dir | head -1)
 	if [ -z "$class_id" ]; then
@@ -110,29 +192,21 @@ class_id_allocate() {
 	echo $class_id
 }
 
-# class_id_free $class_id
-class_id_free() {
+# __class_id_free $class_id
+__class_id_free() {
 	local class_id="$1"
 	mv -f $lock_shapers_dir/$class_id $free_shapers_dir/$class_id || return 1
 	: > $free_shapers_dir/$class_id || return 1
 }
 
-tc() {
-	/sbin/tc $@ || echo /sbin/tc $@
-}
-
-#ip2mark $ip
-ip2mark() {
+#__ip2mark $ip
+__ip2mark() {
 	[ "$#" = '0' ] && return 1
 	local ip=( ${1//./ } )
 	echo $((${ip[3]}*256*256*256+${ip[2]}*256*256+${ip[1]}*256+${ip[0]}))
 }
 
 # __shaper_add session_id rate_in ceil_in burst_in rate_out ceil_out burst_out
-
-__try() {
-	$@ || ((retval++))
-}
 
 __shaper_add() {
 	local session_id="$1"
@@ -145,12 +219,12 @@ __shaper_add() {
 	local class_id="$(__session_var_get $session_id class_id)"
 	local ip=$session_id
 	[ -z "$ip" ] && return 1
-	local mark=$(ip2mark $ip)
+	local mark=$(__ip2mark $ip)
 	[ -z "$mark" ] && return 2
 
 	[ "$rate_in" = '-1' -a "$rate_out" = '-1' ] && return 1
 	if [ -z $class_id ]; then
-		class_id="$(class_id_allocate $ip)"
+		class_id="$(__class_id_allocate $ip)"
 	fi
 
 	[ -f $free_shapers_dir/$class_id ] && mv $free_shapers_dir/$class_id $lock_shapers_dir/$class_id
@@ -171,7 +245,7 @@ __shaper_add() {
 	__try tc qdisc replace dev imq1 parent 1:$class_id handle $class_id: pfifo
 
 	if [ "$retval" -gt '0' ]; then
-		class_id_free $class_id
+		__class_id_free $class_id
 		return $retval
 	fi
 
@@ -185,7 +259,7 @@ __shaper_del() {
 	local session_id="$1"
 	local ip=$session_id
 	[ -z "$ip" ] && return 1
-	local mark=$(ip2mark $ip)
+	local mark=$(__ip2mark $ip)
 	[ -z "$mark" ] && return 2
 	local class_id="$(__session_var_get $session_id class_id)"
 	if [ -z "$class_id" ]; then
@@ -199,62 +273,28 @@ __shaper_del() {
 		__try tc class  del dev "$dev" classid "1:$class_id"
 	done
 	[ "$retval" != '0' ] && return $retval
-	class_id_free $class_id && __session_update $session_id class_id ''
+	__class_id_free $class_id && __session_update $session_id class_id ''
 }
 #REFACTORING END
 
-nat_chain_eval() {
-	for i in ${1//./ }; do
-		x=$((num<<8))
-		num=$((x|i))
-	done
-	(( a=num & 15 ))
-	(( b=(num & 240) >> 4 ))
-	echo "xge_user2snat_${a}_${b}"
-}
+ip() {
+	local list="$1"
+	local action="$2"
+	[ "$action" = '1' ] && action='add'
+	[ "$action" = '0' ] && action='del'
+	local ip="$3"
+	echo "$FUNCNAME $@"
+	[ "${list:0:4}" != "xge_" ] && list=xge_$list
 
-iptab_file_refresh() {
-	if [ ! -f "$TAB_FILE" ] || [ $(($(date +%s) - $(stat -c %Y "$TAB_FILE"))) -gt 5 ]; then
-		iptables -t nat -nL --line | fgrep SNAT > $TAB_FILE
-		grep "NAT" $TAB_FILE > $TAB_FILE.SNAT
-	else
-		echo SKIP $FUNCNAME
+	if  [ "$#" -ge '4' -a "$list" = 'xge_snat' ]; then
+		snatip=$4
+		__snat_tree_del "$3" "$4"
+		if [ "$action" = 'add' -o "$action" = 'del' ]; then
+			__snat_tree_$action "$3" "$4"
+			return $?
+		fi
 	fi
-}
-
-snat_tree_add() {
-	snat_tree_del $1 $2 &>/dev/null
-	[ -z "$2" -o "$2" = '0.0.0.0' ] && return 0
-	iptables -t nat -I $(nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && __session_update $1 snat $2
-}
-
-snat_tree_del() {
-	iptab_file_refresh
-	NAT_CHAIN=$(nat_chain_eval $1)
-	iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source $2 &>/dev/null
-	while read OLD_NUMBER_SNAT t t t t t to t; do
-		[ -z "$OLD_NUMBER_SNAT" ] && break
-		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/} 2>/dev/null
-	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
-	__session_update $1 snat ''
-}
-
-session() {
-	session_info() {
-		cat $session_dir/$1
-	}
-
-	session_cmd="$1"
-	shift
-	case "$session_cmd" in
-	info )
-		session_info $@
-		;;
-	* )
-		echo "bad subcommand: $session_cmd $@"
-		return 1
-		;;
-	esac
+	__ipset $action $list $ip
 }
 
 # 	__ipset $action $list $ip
@@ -271,80 +311,72 @@ __ipset() {
 
 }
 
-mac_set() {
-	__session_update "$1" mac "$2"
+__nat_chain_eval() {
+	for i in ${1//./ }; do
+		x=$((num<<8))
+		num=$((x|i))
+	done
+	(( a=num & 15 ))
+	(( b=(num & 240) >> 4 ))
+	echo "xge_user2snat_${a}_${b}"
 }
 
-mac_remove() {
-	__session_update "$1" mac ''
+__snat_cache_refresh() {
+	if [ ! -f "$TAB_FILE" ] || [ $(($(date +%s) - $(stat -c %Y "$TAB_FILE"))) -gt 5 ]; then
+		iptables -t nat -nL --line | fgrep SNAT > $TAB_FILE
+		grep "NAT" $TAB_FILE > $TAB_FILE.SNAT
+	else
+		echo "SKIP ${FUNCNAME//_/ }"
+	fi
 }
 
-policy() {
-	# policy_set 10.128.0.75 in 1000 2000 3000 out 1000 2000 3000
-	policy_set() {
-		echo $FUNCNAME $@
-		local ip="$1"
-		shift
+__snat_tree_add() {
+	__snat_tree_del $1 $2 &>/dev/null
+	[ -z "$2" -o "$2" = '0.0.0.0' ] && return 0
+	iptables -t nat -I $(__nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && __session_update $1 snat $2
+}
 
-		params="$@"
-		in=${params##*in }
-		in=${in%% out*}
-		out=${params##*out }
+__snat_tree_del() {
+	__snat_cache_refresh
+	NAT_CHAIN=$(__nat_chain_eval $1)
+	iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source $2 &>/dev/null
+	while read OLD_NUMBER_SNAT t t t t t to t; do
+		[ -z "$OLD_NUMBER_SNAT" ] && break
+		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/} 2>/dev/null
+	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
+	__session_update $1 snat ''
+}
 
-		read rate_in ceil_in burst_in tmp_in <<< "$in"
-		read rate_out ceil_out burst_out tmp_out <<< "$out"
-
-		rate_in=${rate_in:-512}
-		ceil_in=${ceil_in:-$rate_in}
-		burst_in=${burst_in:-0}
-		rate_out=${rate_out:-512}
-		ceil_out=${ceil_out:-$rate_out}
-		burst_out=${burst_out:-0}
-
-		__shaper_add $ip $rate_in $ceil_in $burst_in $rate_out $ceil_out $burst_out
-		[ "$?" = '0' ] && __session_update $ip policy "in $rate_in $ceil_in $burst_in out $rate_out $ceil_out $burst_out"
-	}
-
-	# policy_remove 10.128.0.75
-	policy_remove() {
-		echo $FUNCNAME $@
-		local ip="$1"
-		shift
-		__shaper_del $ip || return $?
-		[ "$?" = '0' ] && __session_update $ip policy ''
-	}
-
-	policy_cmd="$1"
+mac() {
+	mac_cmd="$1"
 	shift
-	case $policy_cmd in
-	set | remove )
-		policy_$policy_cmd $@
+	case "$mac_cmd" in
+	set | remove | show )
+		__mac_$mac_cmd $@
 		;;
 	* )
-		echo "bad subcommand: $policy_cmd $@"
+		echo "bad subcommand: $mac_cmd $@"
 		return 1
 		;;
 	esac
 }
 
-ip() {
-	local list="$1"
-	local action="$2"
-	[ "$action" = '1' ] && action='add'
-	[ "$action" = '0' ] && action='del'
-	local ip="$3"
-	echo "$FUNCNAME $@"
-	[ "${list:0:4}" != "xge_" ] && list=xge_$list
+# __mac_set $ip $mac
+__mac_set() {
+	echo ${FUNCNAME//_/ } $@
+	arp -s $1 $2 && __session_update "$1" mac "$2"
+}
 
-	if  [ "$#" -ge '4' -a "$list" = 'xge_snat' ]; then
-		snatip=$4
-		snat_tree_del "$3" "$4"
-		if [ "$action" = 'add' ]; then
-			snat_tree_add "$3" "$4"
-			return $?
-		fi
-	fi
-	__ipset $action $list $ip
+# __mac_remove $ip
+__mac_remove() {
+	echo ${FUNCNAME//_/ } $@
+	arp -d $1 && __session_update "$1" mac ''
+}
+
+# __mac_show $ip
+__mac_show() {
+	echo ${FUNCNAME//_/ } $@
+	arp -n | grep -w $1
 }
 
 main() {
@@ -352,7 +384,7 @@ main() {
 	cmd=$1
 	shift
 	case $cmd in
-	ip | filter | nat | mangle | session | policy )
+	ip | filter | nat | mangle | session | policy | mac )
 		$cmd $@
 		;;
 	* )
