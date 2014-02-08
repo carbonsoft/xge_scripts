@@ -10,7 +10,7 @@ echo_from_arr() {
 
 echo_classes() {
 	local iface=$1
-	local tmpd=/tmp/tmpfs
+	local tmpd=/tmp/firewall/
 	local arr a b
 
 	sed -r '
@@ -35,7 +35,7 @@ echo_classes() {
 
 main() {
 	local i
-	local tmpd=/tmp/tmpfs
+	local tmpd=/tmp/firewall
 	for i in imq1 imq0; do
 		tc -d qdisc show dev $i | sed -e 's/root refcnt [0-9]* //g; s/parent [0-9]*:[0-9]* limit/limit/g' > $tmpd/qdisc.$$
 		tc -d class show dev $i | sed -e 's/overhead [0-9a-f]* //g' > $tmpd/class.$$

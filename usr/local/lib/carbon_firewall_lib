@@ -51,7 +51,7 @@ get_app_chains() {
 }
 
 flush_chains() {
-	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	local tmpfile=/tmp/firewall/firewall_$FUNCNAME.$$
 	get_app_chains $1 > $tmpfile
 	while read chain; do
 		iptables -t $1 -F $chain
@@ -60,7 +60,7 @@ flush_chains() {
 }
 
 delete_chains() {
-	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	local tmpfile=/tmp/firewall/firewall_$FUNCNAME.$$
 	get_app_chains $1 > $tmpfile
 	while read chain; do
 		iptables -t $1 -X $chain
@@ -70,7 +70,7 @@ delete_chains() {
 
 remove_links() {
 	local table="$1"
-	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	local tmpfile=/tmp/firewall/firewall_$FUNCNAME.$$
 	iptables-save -t $table | grep -- "-j ${app}_[A-Za-z]*" > $tmpfile
 	while read line; do
 		iptables -t $table ${line/A/D}

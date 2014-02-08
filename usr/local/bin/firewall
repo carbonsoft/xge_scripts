@@ -1,5 +1,11 @@
 #!/bin/bash
 
+trap _exit EXIT
+_exit(){
+    local ret=$?
+    rm -f /tmp/firewall/*.$$
+    return $ret
+}
 . /cfg/config
 . /usr/local/lib/carbon_firewall_lib
 
@@ -48,7 +54,7 @@ xge_nat() {
 	iptables -t nat -A PREROUTING -j xge_dnat
 	iptables -t nat -A POSTROUTING -j xge_postrouting
 
-	iptables_file=/tmp/iptables_file.nat.$$
+	iptables_file=/tmp/firewall/iptables_file.nat.$$
 	echo "#" > $iptables_file
 	make_tree nat user2snat user2snat s
 	if ! iptables-restore --noflush < $iptables_file; then
@@ -178,7 +184,7 @@ start() {
 	xge_filter
 	xge_mangle
 	restore
-
+echo "TODO оптимизировать конфиг accell"
 }
 
 stop() {

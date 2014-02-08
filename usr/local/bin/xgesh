@@ -2,7 +2,6 @@
 
 export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/:/usr/local/bin/"
 
-#set >/tmp/1.log
 #set -eux
 #TODO: flock
 #TODO: transparent ipset
@@ -47,8 +46,8 @@ session_dir="/var/lib/xge_sessions/"
 shapers_dir="/var/lib/xge_shapers"
 free_shapers_dir="$shapers_dir/free"
 lock_shapers_dir="$shapers_dir/lock"
-exec 20>/tmp/xge_iptables.lock
-exec 21>/tmp/xge_class_id_allocate.lock
+exec 20>/var/lock/xge_iptables.lock
+exec 21>/var/lock/xge_class_id_allocate.lock
 
 lists_prepare() {
 	for f in {2001..8998}; do
@@ -72,8 +71,8 @@ die() {
 iptables() {
 	if ! flock -x -w 30 20; then
 		echo 'Some iptables get my locker'
-		rm -f /tmp/xge_iptables.lock
-		exec 20>/tmp/xge_iptables.lock
+		rm -f /var/lock/xge_iptables.lock
+		exec 20>/var/lock/xge_iptables.lock
 		flock -x -w 5 20
 	fi
 
@@ -90,8 +89,8 @@ iptables() {
 __class_id_lock() {
 	if ! flock -x -w 5 21; then
 		echo 'Some class_id get my locker'
-		rm -f /tmp/class_id_allocate.lock
-		exec 21>/tmp/class_id_allocate.lock
+		rm -f /var/lock/class_id_allocate.lock
+		exec 21>/var/lock/class_id_allocate.lock
 		flock -x -w 5 21
 	fi
 }
@@ -473,12 +472,12 @@ __mac_show() {
 	arp -n | grep -w $1
 }
 
-main() {
+main() {	
 	prepare
 	cmd=$1
 	shift
 	session_lock=${@//[^0-9 .]/}
-	session_lock=/tmp/xge_${session_lock%% *}.lock
+	session_lock=/var/lock/xge_${session_lock%% *}.lock
 	case $cmd in
 	ip | filter | nat | mangle | session | policy | mac )
 		exec 22>$session_lock
