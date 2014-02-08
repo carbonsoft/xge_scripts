@@ -7,7 +7,7 @@ app=${app['appname']}
 
 config=/var/lib/users.dat
 usersd=/usr/local/sbin/firewall_usersd
-qos=/usr/local/bin/shaper.sh
+shaper=/usr/local/bin/shaper.sh
 
 xge_nat() {
 	NAT_DROP=" DNAT --to-dest 169.169.169.169"
@@ -172,17 +172,17 @@ xge_mangle() {
 }
 
 start() {
-	$qos
+	firewall_clear
 	xge_ipset
 	xge_nat
 	xge_filter
 	xge_mangle
-	$usersd start
+	restore
+
 }
 
 stop() {
-	iptables_cleanup
-	ipset_cleanup
+	save
 }
 
 restart() {
