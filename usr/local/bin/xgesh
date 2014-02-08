@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
+export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/:/usr/local/bin/"
 
 #set >/tmp/1.log
 #set -eux
@@ -12,6 +12,7 @@ export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/"
 #TODO: ip username snat policy lists mac class_id to some list or variable or magic to avoid dupicity
 #TODO: trap EXIT _exit
 #TODO: rotate class id [ ! -f $FILE_CLASS_ID ] && class_id=2000
+# accel-cmd terminate ip 10.128.0.73
 
 # examples
 #ip xge_forward add 192.168.1.1
@@ -116,8 +117,8 @@ session() {
 	session_cmd="$1"
 	shift
 	case "$session_cmd" in
-	info )
-		__session_info $@
+	info | disconnect | start | stop | test )
+		__session_$session_cmd $@
 		;;
 	* )
 		echo "bad subcommand: $session_cmd $@"
@@ -134,23 +135,52 @@ __session_update() {
 	val="$@"
 	_n=$'\n'
 	_t=$'\t'
-	val="${val//[-]/_}"
+	val="${val//[-]/___}"
 	val="${val//[$_n|$_t| ]/|}"
 	[ "$val" = "" ] && val='-'
 	row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	[ -s $session_dir/$session_id ] && read row < $session_dir/$session_id
-	read ip username snat policy lists mac class_id tmp <<< "$row"
+	read ip username snat policy lists mac class_id state type terminate_cause tmp <<< "$row"
 	ip=$session_id #hack
 	[ "$username" = '-' ] && username="S$ip"
 	eval $var='$val'
 	[ ! -d $session_dir ] && mkdir -p $session_dir
-	echo $ip $username $snat $policy $lists $mac $class_id $tmp > $session_dir/$session_id.new
+	echo $ip $username $snat $policy $lists $mac $class_id $state $type $terminate_cause $tmp > $session_dir/$session_id.new
 	[ "$?" = '0' ] && mv -f $session_dir/$session_id.new $session_dir/$session_id
+}
+
+# __session_disconnect $ip
+#TODO: сбросить веб-авторизацию итд
+__session_disconnect() {
+	echo ${FUNCNAME//_/ } $@
+	if accel-cmd terminate ip $1; then
+		__session_stop $1
+		__session_update $1 terminate_cause 'CoA-Disconnect'
+	fi
+}
+
+__session_start() {
+	local session_id="$1"
+	local SESSION_TYPE="$2"
+	__session_update $session_id state UP
+	__session_update $session_id type $SESSION_TYPE
+	__session_update $session_id terminate_cause ''
+}
+
+__session_stop() {
+	local session_id="$1"
+	local class_id="$(__session_var_get $session_id class_id)"
+	__class_id_free $class_id
+	__session_update $session_id state DOWN
 }
 
 __session_remove() {
 	#TODO: убивать всё нах (if-down / radius-coa disconnect iptables/ipset)
 	rm -f /var/lib/$session_dir/$ip
+}
+
+__session_test() {
+	session_test.sh $1
 }
 
 # __session_var_get session_id var
@@ -160,10 +190,10 @@ __session_var_get() {
 	var="$1"
 	shift
 	[ ! -s $session_dir/$session_id ] && return 1
-	read ip username snat policy lists mac class_id tmp < $session_dir/$session_id
+	read ip username snat policy lists mac class_id state type terminate_cause tmp < $session_dir/$session_id
 	local val=${!var}
 	[ "$val" = '-' ] && val=''
-	echo "$val"
+	echo "${val//___/-}"
 }
 
 __session_info() {
@@ -236,6 +266,7 @@ __class_id_allocate() {
 			return 1
 		fi
 	fi
+	[ -z "$class_id" ] && return 1
 	mv -f $free_shapers_dir/$class_id $lock_shapers_dir/$class_id || return 1
 	echo $ip > $lock_shapers_dir/$class_id
 	echo $class_id
@@ -245,6 +276,7 @@ __class_id_allocate() {
 # __class_id_free $class_id
 __class_id_free() {
 	local class_id="$1"
+	[ -z "$class_id" ] && return 1
 	mv -f $lock_shapers_dir/$class_id $free_shapers_dir/$class_id || return 1
 	: > $free_shapers_dir/$class_id || return 1
 }
@@ -354,7 +386,7 @@ __ipset() {
 		fi
 		ipset $@ || return $?
 		lists="|${lists}|"; lists="${lists//|$2|/|}$2"; lists=${lists/||/|}; lists=${lists#|};
-    		__session_update $3 lists ${lists//|/ }
+		__session_update $3 lists ${lists//|/ }
 		return $?
 	fi
 
