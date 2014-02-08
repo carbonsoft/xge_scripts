@@ -1,0 +1,6 @@
+#!/bin/bash
+
+[ ! -d /var/log/xge/ ] && mkdir /var/log/xge/
+echo >> /var/log/xge/sessions.log
+echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: ip-down $@" >> /var/log/xge/sessions.log
+xgesh session stop $5 PPP 2>&1
