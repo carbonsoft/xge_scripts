@@ -87,7 +87,9 @@ case "$1" in
 		[ "${vpn[enabled]}" = '1' ] || exit 255
 		stop && echo_success || echo_failure
 		echo
-		start && echo_success || echo_failure
+		start
+		RETVAL=$?
+		[ "$RETVAL" = '0' ] && echo_success || echo_failure
 		;;
 	condrestart)
 		[ -e "$LOCKFILE" ] && restart
@@ -97,10 +99,10 @@ case "$1" in
 		status $proc
 		RETVAL=$?
 		;;
-	*)  
+	*)
 		echo $"Usage: $0 {start|stop|status|restart|condrestart}"
 		exit 1
 		;;
 esac
-echo 
+echo
 exit $RETVAL
