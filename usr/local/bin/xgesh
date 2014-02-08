@@ -126,6 +126,8 @@ session() {
 	esac
 }
 
+session_fields="ip username snat policy lists mac class_id state type terminate_cause tmp"
+
 __session_update() {
 	session_id="$1"
 	shift
@@ -139,12 +141,12 @@ __session_update() {
 	[ "$val" = "" ] && val='-'
 	row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	[ -s $session_dir/$session_id ] && read row < $session_dir/$session_id
-	read ip username snat policy lists mac class_id state type terminate_cause tmp <<< "$row"
+	read $session_fields <<< "$row"
 	ip=$session_id #hack
 	[ "$username" = '-' ] && username="S$ip"
 	eval $var='$val'
 	[ ! -d $session_dir ] && mkdir -p $session_dir
-	echo $ip $username $snat $policy $lists $mac $class_id $state $type $terminate_cause $tmp > $session_dir/$session_id.new
+	eval echo "\$${session_fields// / \$}" > $session_dir/$session_id.new
 	[ "$?" = '0' ] && mv -f $session_dir/$session_id.new $session_dir/$session_id
 }
 
@@ -170,7 +172,10 @@ __session_stop() {
 	local session_id="$1"
 	local class_id="$(__session_var_get $session_id class_id)"
 	__class_id_free $class_id
+ 	[ "$(__session_var_get $session_id state)" = "DOWN" ] && return 0 #for save 'CoA-Disconnect'
 	__session_update $session_id state DOWN
+	__session_update $session_id terminate_cause $2
+
 }
 
 __session_remove() {
@@ -189,14 +194,21 @@ __session_var_get() {
 	var="$1"
 	shift
 	[ ! -s $session_dir/$session_id ] && return 1
-	read ip username snat policy lists mac class_id state type terminate_cause tmp < $session_dir/$session_id
+	read $session_fields  < $session_dir/$session_id
 	local val=${!var}
 	[ "$val" = '-' ] && val=''
 	echo "${val//___/-}"
 }
 
 __session_info() {
-	cat $session_dir/$1
+	local session_id=$1
+	read $session_fields  < $session_dir/$session_id
+	for var in $session_fields; do
+	    [ "$var" = "tmp" ] && continue
+	    [ "${!var}" = '-' ] && eval $var=''	    
+	    echo "$var=${!var//___/-} "
+	done
+	echo
 }
 
 policy() {
@@ -276,7 +288,7 @@ __class_id_allocate() {
 __class_id_free() {
 	local class_id="$1"
 	[ -z "$class_id" ] && return 1
-	mv -f $lock_shapers_dir/$class_id $free_shapers_dir/$class_id || return 1
+	[ -f "$lock_shapers_dir/$class_id" ] && mv -f $lock_shapers_dir/$class_id $free_shapers_dir/$class_id || return 1
 	: > $free_shapers_dir/$class_id || return 1
 }
 
