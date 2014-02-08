@@ -112,19 +112,19 @@ ipset_save() {
 
 ipset_restore() {
 	[ ! -s $IPSET_SAVE_FILE ] && return 1
-	cp -f $IPSET_SAVE_FILE /tmp/firewall/ipset.tmp
-	grep '^create' $IPSET_SAVE_FILE > /tmp/firewall/ipset_create.tmp
+	cp -f $IPSET_SAVE_FILE /tmp/firewall/ipset.tmp.$$
+	grep '^create' $IPSET_SAVE_FILE > /tmp/firewall/ipset_create.tmp.$$
 
 	while read t list t; do
 		# ipset destroy $list &>/dev/null && continue
-		ipset destroy $list 2>/tmp/firewall/ipset_destroy.out && continue
-		fgrep 'does not exist'  /tmp/firewall/ipset_destroy.out && continue
+		ipset destroy $list 2>/tmp/firewall/ipset_destroy.out.$$ && continue
+		fgrep 'does not exist'  /tmp/firewall/ipset_destroy.out.$$ && continue
 		ipset flush $list &>/dev/null
-		grep -v "^create $list" /tmp/firewall/ipset.tmp > /tmp/firewall/ipset2.tmp
-		mv -f /tmp/firewall/ipset2.tmp /tmp/firewall/ipset.tmp
-	done < /tmp/firewall/ipset_create.tmp
+		grep -v "^create $list" /tmp/firewall/ipset.tmp.$$ > /tmp/firewall/ipset2.tmp.$$
+		mv -f /tmp/firewall/ipset2.tmp.$$ /tmp/firewall/ipset.tmp.$$
+	done < /tmp/firewall/ipset_create.tmp.$$
 
-	if ! ipset restore < /tmp/firewall/ipset.tmp; then
+	if ! ipset restore < /tmp/firewall/ipset.tmp.$$; then
 		ipset restore < $IPSET_SAVE_FILE
 		echo 'TODO: восстанавливаться из сессий если не получилось с первого раза'
 	fi
