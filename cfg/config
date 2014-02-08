@@ -14,6 +14,7 @@ app['ppp-server.ip.widget']='ip "IP-адрес VPN-серверов" "Не за�
 app['widget']='menu "Настройки маршрутизатора"'
 
 declare -A vpn
+vpn['widget']='menu "Настройки VPN сервера" ""'
 vpn['enabled']='1'
 vpn['enabled.widget']='checkbox "Включить VPN-сервер" ""'
 vpn['pptp.enabled']='1'
@@ -99,8 +100,6 @@ firewall['new_limit_e.widget']='inputbox "Ограничить колво нов
 
 declare -A remote_management
 remote_management['widget']='menu "Настройки управления маршрутизатором" "Пароль задаётся в настройках Radius"'
-remote_management['carbon_nasd.enabled.widget']='checkbox "Включить демон приёма команд от биллинга" "Без него XGE-Router не будет корректно работать"'
-remote_management['carbon_nasd.enabled']='1'
 remote_management['carbon_coad.enabled.widget']='checkbox "Включить обработчик radius coa" "Без него XGE-Router не будет корректно работать"'
 remote_management['carbon_coad.enabled']='1'
 
@@ -108,12 +107,12 @@ declare -A nfusens
 nfusens['widget']='menu "Настройки сенсора netflow" ""'
 nfusens['enabled.widget']='checkbox "Включить nfusens" "Без него XGE-Router не будет корректно работать"'
 nfusens['enabled']='1'
+nfusens['collector']='10.90.10.4:9996'
+nfusens['collector.widget']='inputbox "Сервер сборки статистики" "Адрес netflow-коллектора: IP:PORT"'
 
 declare -A radclient
 radclient['widget']='menu "Настройки Radius" "Настройки подключения к биллингу (АСР / ААА-серверу)"'
 radclient['secret']='servicemode'
-radclient['netflow_collector']='10.0.0.254:9996'
-radclient['netflow_collector.widget']='inputbox "Сервер сборки статистики" "Адрес netflow-коллектора: IP:PORT"'
 radclient['secret.widget']='inputbox "Radius-secret" "Секретный ключ для доступа к биллингу (АСР / ААА-серверу)"'
 radclient['authserver']='10.0.0.254:1812'
 radclient['authserver.widget']='inputbox "Сервер авторизации" "Сервер авторизации, формат: IP:PORT"'
