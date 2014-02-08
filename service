@@ -8,11 +8,12 @@ __exec() {
 start() {
 	retval=0
 	__exec /genconfig
+	__exec /etc/init.d/crond start
 	__exec /usr/local/bin/firewall start 
 	__exec /etc/init.d/httpd start
-	__exec /etc/init.d/carbon_coad start
 	__exec /etc/init.d/radiusd start
 	__exec /etc/init.d/accel-pppd start
+	__exec /etc/init.d/nfusens start
 	return $retval
 	
 }
@@ -21,9 +22,10 @@ stop() {
 	local retval=0
 	__exec /usr/local/bin/firewall stop
 	__exec /etc/init.d/httpd stop
-	__exec /etc/init.d/carbon_coad stop
 	__exec /etc/init.d/radiusd stop
 	__exec /etc/init.d/accel-pppd stop
+	__exec /etc/init.d/nfusens stop
+	__exec /etc/init.d/crond stop
 	return $retval
 }
 
