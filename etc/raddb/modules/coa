@@ -2,7 +2,7 @@
 
 exec coa {
 	wait = yes
-	program = "/usr/bin/sudo /usr/local/bin/coa.sh %{Filter-Id}"
+	program = "/usr/bin/sudo /usr/local/bin/coa.sh %{request:Packet-Type} %{Filter-Id}"
 	input_pairs = request
 	output_pairs = reply
 }
