@@ -1,15 +1,20 @@
 #!/bin/bash
 
 [ ! -d /var/log/xge/ ] && mkdir /var/log/xge/
+
+n=$'\n'
+echo >> /var/log/xge/sessions.log
+echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: ip-up $@" >> /var/log/xge/sessions.log
 while read cmd data; do
 	if [ "$cmd" = 'Filter-Id' ]; then
 		PARAMS="$data"
 		PARAMS=${PARAMS//Framed-IP-Address/$5}
-		echo
-		if xgesh $PARAMS 2>&1; then
-			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: $PARAMS [   OK   ]"
+		if out=$(xgesh $PARAMS 2>&1); then
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh ${out//$n/ >>} [   OK   ]"
 		else
-			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: $PARAMS [ FAILED ]"
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh ${out//$n/ >>} [ FAILED ]"
 		fi
 	fi
-done < /var/run/radattr.$1 >> /var/log/xge/ip-up.log
+done < /var/run/radattr.$1 >> /var/log/xge/sessions.log
+
+xgesh session start $5 PPP
