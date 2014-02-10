@@ -51,7 +51,7 @@ get_app_chains() {
 }
 
 flush_chains() {
-	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	local tmpfile=/tmp/firewall/firewall_$FUNCNAME.$$
 	get_app_chains $1 > $tmpfile
 	while read chain; do
 		iptables -t $1 -F $chain
@@ -60,7 +60,7 @@ flush_chains() {
 }
 
 delete_chains() {
-	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	local tmpfile=/tmp/firewall/firewall_$FUNCNAME.$$
 	get_app_chains $1 > $tmpfile
 	while read chain; do
 		iptables -t $1 -X $chain
@@ -70,7 +70,7 @@ delete_chains() {
 
 remove_links() {
 	local table="$1"
-	local tmpfile=/tmp/firewall_$FUNCNAME.$$
+	local tmpfile=/tmp/firewall/firewall_$FUNCNAME.$$
 	iptables-save -t $table | grep -- "-j ${app}_[A-Za-z]*" > $tmpfile
 	while read line; do
 		iptables -t $table ${line/A/D}
@@ -112,33 +112,35 @@ ipset_save() {
 
 ipset_restore() {
 	[ ! -s $IPSET_SAVE_FILE ] && return 1
-	cp -f $IPSET_SAVE_FILE /tmp/firewall/ipset.tmp
-	grep '^create' $IPSET_SAVE_FILE > /tmp/firewall/ipset_create.tmp
+	cp -f $IPSET_SAVE_FILE /tmp/firewall/ipset.tmp.$$
+	grep '^create' $IPSET_SAVE_FILE > /tmp/firewall/ipset_create.tmp.$$
 
 	while read t list t; do
 		# ipset destroy $list &>/dev/null && continue
-		ipset destroy $list 2>/tmp/firewall/ipset_destroy.out && continue
-		fgrep 'does not exist'  /tmp/firewall/ipset_destroy.out && continue
+		ipset destroy $list 2>/tmp/firewall/ipset_destroy.out.$$ && continue
+		fgrep 'does not exist'  /tmp/firewall/ipset_destroy.out.$$ && continue
 		ipset flush $list &>/dev/null
-		grep -v "^create $list" /tmp/firewall/ipset.tmp > /tmp/firewall/ipset2.tmp
-		mv -f /tmp/firewall/ipset2.tmp /tmp/firewall/ipset.tmp
-	done < /tmp/firewall/ipset_create.tmp
+		grep -v "^create $list" /tmp/firewall/ipset.tmp.$$ > /tmp/firewall/ipset2.tmp.$$
+		mv -f /tmp/firewall/ipset2.tmp.$$ /tmp/firewall/ipset.tmp.$$
+	done < /tmp/firewall/ipset_create.tmp.$$
 
-	if ! ipset restore < /tmp/firewall/ipset.tmp; then
+	if ! ipset restore < /tmp/firewall/ipset.tmp.$$; then
 		ipset restore < $IPSET_SAVE_FILE
 		echo 'TODO: восстанавливаться из сессий если не получилось с первого раза'
 	fi
 }
 
 iptables_snat_save() {
-	echo "TODO: locker" && sleep 1
 	[ ! -d /tmp/firewall/ ] && mkdir -p /tmp/firewall/
+	exec 20> /var/lock/xge_iptables.lock
+	flock -x -w 10 20
 	if iptables-save --table=nat > $SNAT_TMPFILE; then
 		echo '*nat' > $SNAT_SAVE_FILE.$$
 		grep "xge_.*-j SNAT --to-source" $SNAT_TMPFILE >> $SNAT_SAVE_FILE.$$
 		echo 'COMMIT' >> $SNAT_SAVE_FILE.$$
 		mv -f $SNAT_SAVE_FILE.$$ $SNAT_SAVE_FILE
 	fi
+	flock -u 20
 }
 
 iptables_snat_restore() {
