@@ -112,19 +112,19 @@ nfusens['collector.widget']='inputbox "Сервер сборки статист�
 
 declare -A radclient
 radclient['widget']='menu "Настройки Radius" "Настройки подключения к биллингу (АСР / ААА-серверу)"'
-radclient['secret']='servicemode'
+radclient['secret']='algosolarsystem'
 radclient['secret.widget']='inputbox "Radius-secret" "Секретный ключ для доступа к биллингу (АСР / ААА-серверу)"'
-radclient['authserver']='10.0.0.254:1812'
+radclient['authserver']='169.1.18.12:1812'
 radclient['authserver.widget']='inputbox "Сервер авторизации" "Сервер авторизации, формат: IP:PORT"'
-radclient['acctserver']='10.0.0.254:1813'
+radclient['acctserver']='169.1.18.13:1813'
 radclient['acctserver.widget']='inputbox "Сервер аккаунтинга" "Сервер аккаунтинга, формат: IP:PORT"'
-radclient['coa_client.ip']='10.0.0.254'
+radclient['coa_client.ip']='169.1.18.12'
 radclient['coa_client.ip.widget']='inputbox "IP адрес COA-клиента" "формат: IP, обычно адрес биллинга"'
-radclient['coa_client.passwd']='servicemode'
+radclient['coa_client.passwd']='algosolarsystem'
 radclient['coa_client.passwd.widget']='inputbox "Пароль COA-клиента" "формат: строка"'
 radclient['coa_server.port']='3799'
 radclient['coa_server.port.widget']='inputbox "Порт COA-сервера" "По умолчанию 3799"'
-radclient['nas_identifier']='10.0.0.10'
+radclient['nas_identifier']='169.1.37.99'
 radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-сервера" "Является идентификатором этого AS в настройках Radius-сервера биллинга"'
 
 declare -A ctl
