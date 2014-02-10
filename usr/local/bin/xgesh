@@ -2,7 +2,6 @@
 
 export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/:/usr/local/bin/"
 
-#set >/tmp/1.log
 #set -eux
 #TODO: flock
 #TODO: transparent ipset
@@ -35,7 +34,7 @@ trap __exit EXIT
 
 __try() {
 	if ! $@ 2>&1; then
-		echo "Error: $@ [ FAILED ]"
+		echo "xgesh_error: $@ [ FAILED ]"
 		((retval++))
 		return $retval
 	fi
@@ -47,8 +46,8 @@ session_dir="/var/lib/xge_sessions/"
 shapers_dir="/var/lib/xge_shapers"
 free_shapers_dir="$shapers_dir/free"
 lock_shapers_dir="$shapers_dir/lock"
-exec 20>/tmp/xge_iptables.lock
-exec 21>/tmp/xge_class_id_allocate.lock
+exec 20>/var/lock/xge_iptables.lock
+exec 21>/var/lock/xge_class_id_allocate.lock
 
 lists_prepare() {
 	for f in {2001..8998}; do
@@ -62,18 +61,11 @@ prepare() {
 	done
 }
 
-die() {
-	err="$1"
-	shift
-	echo "$@"
-	exit $err
-}
-
 iptables() {
 	if ! flock -x -w 30 20; then
 		echo 'Some iptables get my locker'
-		rm -f /tmp/xge_iptables.lock
-		exec 20>/tmp/xge_iptables.lock
+		rm -f /var/lock/xge_iptables.lock
+		exec 20>/var/lock/xge_iptables.lock
 		flock -x -w 5 20
 	fi
 
@@ -90,8 +82,8 @@ iptables() {
 __class_id_lock() {
 	if ! flock -x -w 5 21; then
 		echo 'Some class_id get my locker'
-		rm -f /tmp/class_id_allocate.lock
-		exec 21>/tmp/class_id_allocate.lock
+		rm -f /var/lock/class_id_allocate.lock
+		exec 21>/var/lock/class_id_allocate.lock
 		flock -x -w 5 21
 	fi
 }
@@ -127,6 +119,8 @@ session() {
 	esac
 }
 
+session_fields="ip username snat policy lists mac class_id state type terminate_cause tmp"
+
 __session_update() {
 	session_id="$1"
 	shift
@@ -140,12 +134,12 @@ __session_update() {
 	[ "$val" = "" ] && val='-'
 	row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	[ -s $session_dir/$session_id ] && read row < $session_dir/$session_id
-	read ip username snat policy lists mac class_id state type terminate_cause tmp <<< "$row"
+	read $session_fields <<< "$row"
 	ip=$session_id #hack
 	[ "$username" = '-' ] && username="S$ip"
 	eval $var='$val'
 	[ ! -d $session_dir ] && mkdir -p $session_dir
-	echo $ip $username $snat $policy $lists $mac $class_id $state $type $terminate_cause $tmp > $session_dir/$session_id.new
+	eval echo "\$${session_fields// / \$}" > $session_dir/$session_id.new
 	[ "$?" = '0' ] && mv -f $session_dir/$session_id.new $session_dir/$session_id
 }
 
@@ -171,7 +165,10 @@ __session_stop() {
 	local session_id="$1"
 	local class_id="$(__session_var_get $session_id class_id)"
 	__class_id_free $class_id
+	[ "$(__session_var_get $session_id state)" = "DOWN" ] && return 0 #for save 'CoA-Disconnect'
 	__session_update $session_id state DOWN
+	__session_update $session_id terminate_cause $2
+
 }
 
 __session_remove() {
@@ -190,14 +187,21 @@ __session_var_get() {
 	var="$1"
 	shift
 	[ ! -s $session_dir/$session_id ] && return 1
-	read ip username snat policy lists mac class_id state type terminate_cause tmp < $session_dir/$session_id
+	read $session_fields  < $session_dir/$session_id
 	local val=${!var}
 	[ "$val" = '-' ] && val=''
 	echo "${val//___/-}"
 }
 
 __session_info() {
-	cat $session_dir/$1
+	local session_id=$1
+	read $session_fields  < $session_dir/$session_id
+	for var in $session_fields; do
+		[ "$var" = "tmp" ] && continue
+		[ "${!var}" = '-' ] && eval $var=''
+		echo "$var=${!var//___/-} "
+	done
+	echo
 }
 
 policy() {
@@ -261,7 +265,7 @@ __class_id_allocate() {
 			lists_prepare
 			class_id=$(ls -1 $free_shapers_dir | head -1)
 		else
-			echo "Error: No free class_id left" >&2
+			echo "xgesh_error: No free class_id left. Todo try grep tc" >&2
 			__class_id_unlock
 			return 1
 		fi
@@ -277,7 +281,7 @@ __class_id_allocate() {
 __class_id_free() {
 	local class_id="$1"
 	[ -z "$class_id" ] && return 1
-	mv -f $lock_shapers_dir/$class_id $free_shapers_dir/$class_id || return 1
+	[ -f "$lock_shapers_dir/$class_id" ] && mv -f $lock_shapers_dir/$class_id $free_shapers_dir/$class_id || return 1
 	: > $free_shapers_dir/$class_id || return 1
 }
 
@@ -306,7 +310,7 @@ __shaper_add() {
 
 	[ "$rate_in" = '-1' -a "$rate_out" = '-1' ] && return 1
 	if [ -z $class_id ]; then
-		class_id="$(__class_id_allocate $ip)"
+		class_id="$(__class_id_allocate $ip)" || return 2
 	fi
 	[ -f $free_shapers_dir/$class_id ] && mv $free_shapers_dir/$class_id $lock_shapers_dir/$class_id
 	quantum_out=$(( $ceil_out*1000/80 ));
@@ -341,7 +345,7 @@ __shaper_del() {
 	[ -z "$mark" ] && return 2
 	local class_id="$(__session_var_get $session_id class_id)"
 	if [ -z "$class_id" ]; then
-		echo "Error: class_id for $session_id not found"
+		echo "xgesh_error: class_id for $session_id not found"
 		return 1
 	fi
 	local retval=0
@@ -402,8 +406,7 @@ __ipset() {
 	fi
 
 	ipset $@ || return $?
-	# долго
-	# lists="$(ipset -o save -l | fgrep -w $3 | cut -d ' ' -f2 | xargs)"
+	# долго lists="$(ipset -o save -l | fgrep -w $3 | cut -d ' ' -f2 | xargs)"
 
 }
 
@@ -473,24 +476,42 @@ __mac_show() {
 	arp -n | grep -w $1
 }
 
-main() {
+cmd() {
+	local retval=0
 	prepare
 	cmd=$1
 	shift
 	session_lock=${@//[^0-9 .]/}
-	session_lock=/tmp/xge_${session_lock%% *}.lock
+	session_lock=/var/lock/xge_${session_lock%% *}.lock
 	case $cmd in
 	ip | filter | nat | mangle | session | policy | mac )
 		exec 22>$session_lock
 		__session_id_lock
 		$cmd $@
+		retval=$?
 		__session_id_unlock
 		;;
 	* )
-		die 1 "Bad command $cmd $@"
-		return 1
+		echo "Bad command $cmd $@"
+		retval=1
 		;;
 	esac
+	return $retval
 }
-
+main(){
+	local params="$@"
+	local rez=0
+	local out
+	local retval
+	params=${params//;/$'\n'}
+	while read cmd; do
+		[ -z "$cmd" ] && continue
+		out=$( cmd $cmd 2>&1);
+		rez=$?
+		# out=${out//$'\n'/ >> }
+		echo "$out"
+		retval=$((retval+rez))
+	done <<< "$params"
+	return $rez
+}
 main $@
