@@ -2,8 +2,8 @@
 
 PACKET_TYPE="$1"
 shift
-
 PARAMS="$@"
+
 PARAMS=${PARAMS//Framed-IP-Address/$FRAMED_IP_ADDRESS}
 n=$'\n'
 LOGFILE="/var/log/xge/sessions.log"
@@ -14,13 +14,13 @@ if [ "$PACKET_TYPE" = 'Disconnect-Request' ]; then
 	PARAMS="session disconnect $FRAMED_IP_ADDRESS"
 fi
 
-REPLY=$( . /usr/local/bin/xgesh $PARAMS 2>&1)
+REPLY="$( . /usr/local/bin/xgesh $PARAMS 2>&1)"
 ERR=$?
 REPLY="${REPLY//\"/}"
 
 while read line; do
     echo "Reply-Message += \"$line\","
-done <<<"$REPLY"
+done <<< "$REPLY"
 echo "Error-Cause = $((200+ERR))"
 echo "$0[$$]: $@ REPLY: $REPLY (ERR: $ERR)" >> $LOGFILE
 exit $ERR

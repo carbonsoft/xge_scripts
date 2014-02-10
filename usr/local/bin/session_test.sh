@@ -3,7 +3,8 @@
 # set -eu
 
 usage() {
-	echo "$0 $IP"
+	echo 'Usage: '
+	echo "	$0 <IP>"
 	exit 1
 }
 
@@ -28,10 +29,11 @@ show_nat() {
 }
 
 show_filter() {
+	[ -z "$shaper" ] && echo "${FUNCNAME} >> Skip tc filter, no shaper" && return 0
 	echo -n "tc filter show dev imq0 | grep $shaper >> "
-	tc filter show dev imq0 | grep $shaper
+	tc filter show dev imq0 | grep $shaper || echo 'Nothing'
 	echo -n "tc filter show dev imq1 | grep $shaper >> "
-	tc filter show dev imq1 | grep $shaper
+	tc filter show dev imq1 | grep $shaper || echo 'Nothing'
 }
 
 classid_by_filter() {
@@ -39,30 +41,33 @@ classid_by_filter() {
 }
 
 show_rate() {
+	[ -z "$imq0_class" -a -z "$imq1_class" ] && echo "${FUNCNAME} >> Skip rate, no imq0_class" && return 0
 	echo -n "imq0 rate $imq0_class (output): >> "
-	tc -s -s class show dev imq0 | grep -A 2 $imq0_class | grep rate.*backlog.*requeues
+	tc -s -s class show dev imq0 | grep -A 2 $imq0_class | grep rate.*backlog.*requeues || echo 'Nothing'
 	echo -n "imq1 rate $imq1_class (input ): >> "
-	tc -s -s class show dev imq1 | grep -A 2 $imq1_class | grep rate.*backlog.*requeues
+	tc -s -s class show dev imq1 | grep -A 2 $imq1_class | grep rate.*backlog.*requeues || echo 'Nothing'
 }
 
 show_class() {
+	[ -z "$imq0_class" -a -z "$imq1_class" ] && echo "${FUNCNAME} >> Skip tc class, no imq0/1_class" && return 0
 	echo -n "tc class show dev imq0 | grep -w $imq0_class >> "
-	tc class show dev imq0 | grep -w $imq0_class
+	tc class show dev imq0 | grep -w $imq0_class || echo 'Nothing'
 	echo -n "tc class show dev imq1 | grep -w $imq1_class >> "
-	tc class show dev imq1 | grep -w $imq1_class
+	tc class show dev imq1 | grep -w $imq1_class || echo 'Nothing'
 }
 
 show_qdisc() {
+	[ -z "$imq0_class" -a -z "$imq1_class" ] && echo "${FUNCNAME} >> Skip tc qdisc, no imq0/1_class" && return 0
 	echo -n "tc qdisc show dev imq0 | egrep -w $imq0_class >> " 
-	tc qdisc show dev imq0 | grep -w "$imq0_class"
+	tc qdisc show dev imq0 | grep -w "$imq0_class" || echo 'Nothing'
 	echo -n "tc qdisc show dev imq1 | grep -w $imq1_class >> "
-	tc qdisc show dev imq1 | grep -w "$imq1_class"
+	tc qdisc show dev imq1 | grep -w "$imq1_class" || echo 'Nothing'
 
 }
 
 show_device() {
-	echo -n "ip a | grep -w $IP >>"
-	ip a | grep -w $IP
+	echo -n "ip a | grep -w $IP >> "
+	ip a | grep -w $IP || echo 'Nothing'
 }
 
 main() {

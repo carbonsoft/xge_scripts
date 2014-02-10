@@ -2,9 +2,9 @@
 
 trap _exit EXIT
 _exit(){
-    local ret=$?
-    rm -f /tmp/firewall/*.$$
-    return $ret
+	local ret=$?
+	rm -f /tmp/firewall/*.$$
+	return $ret
 }
 . /cfg/config
 . /usr/local/lib/carbon_firewall_lib
@@ -184,7 +184,7 @@ start() {
 	xge_filter
 	xge_mangle
 	restore
-echo "TODO оптимизировать конфиг accell"
+	echo "TODO оптимизировать конфиг accell"
 }
 
 stop() {
