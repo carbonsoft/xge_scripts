@@ -1,0 +1,6 @@
+#!/bin/bash
+
+rm -f /var/lib/xge_sessions/*
+mv -f /var/lib/xge_shapers/lock/* /var/lib/xge_shapers/free/
+firewall reset
+firewall restart
