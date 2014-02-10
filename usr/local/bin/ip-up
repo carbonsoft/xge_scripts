@@ -17,4 +17,4 @@ while read cmd data; do
 	fi
 done < /var/run/radattr.$1 >> /var/log/xge/sessions.log
 
-xgesh session start $5 PPP
+xgesh session start $5 $CTRL_TYPE
