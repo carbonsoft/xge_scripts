@@ -8,6 +8,7 @@ PARAMS=${PARAMS//Framed-IP-Address/$FRAMED_IP_ADDRESS}
 n=$'\n'
 LOGFILE="/var/log/xge/sessions.log"
 [ ! -d /var/log/xge/ ] && mkdir -p /var/log/xge/
+echo "" >> $LOGFILE
 echo "$0[$$]: $PACKET_TYPE $PARAMS" >> $LOGFILE
 
 if [ "$PACKET_TYPE" = 'Disconnect-Request' ]; then
