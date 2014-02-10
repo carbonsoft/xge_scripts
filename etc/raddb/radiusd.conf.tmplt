@@ -323,7 +323,7 @@ max_requests = 2048
 
 listen {
         type = coa
-        ipaddr = *
+        ipaddr = @@@nas_identifier%%%
         port = @@@coa_server_port%%%
 	server = coa
 }
