@@ -202,7 +202,7 @@ max_request_time = 30
 #
 #  Useful range of values: 2 to 10
 #
-cleanup_delay = 5
+cleanup_delay = 2
 
 #  max_requests: The maximum number of requests which the server keeps
 #  track of.  This should be 256 multiplied by the number of clients.
@@ -221,7 +221,7 @@ cleanup_delay = 5
 #
 #  Useful range of values: 256 to infinity
 #
-max_requests = 1024
+max_requests = 2048
 
 #  listen: Make the server listen on a particular IP address, and send
 #  replies out from that address. This directive is most useful for
@@ -504,7 +504,7 @@ security {
 	#  the server to use all available memory on the machine.
 	#
 	#  Setting this number to 0 means "allow any number of attributes"
-	max_attributes = 200
+	max_attributes = 2000
 
 	#
 	#  reject_delay: When sending an Access-Reject, it can be
@@ -597,7 +597,7 @@ $INCLUDE clients.conf
 thread pool {
 	#  Number of servers to start initially --- should be a reasonable
 	#  ballpark figure.
-	start_servers = 5
+	start_servers = 256
 
 	#  Limit on the total number of servers running.
 	#
@@ -620,7 +620,7 @@ thread pool {
 	#
 	#  For more information, see 'max_request_time', above.
 	#
-	max_servers = 32
+	max_servers = 256
 
 	#  Server-pool size regulation.  Rather than making you guess
 	#  how many servers you need, FreeRADIUS dynamically adapts to
@@ -653,7 +653,7 @@ thread pool {
 	#  handle the load.
 	#
 #	max_queue_size = 65536
-
+max_queue_size = 10000
 	#  There may be memory leaks or resource allocation problems with
 	#  the server.  If so, set this value to 300 or so, so that the
 	#  resources will be cleaned up periodically.
@@ -663,7 +663,7 @@ thread pool {
 	#
 	#  '0' is a special value meaning 'infinity', or 'the servers never
 	#  exit'
-	max_requests_per_server = 0
+	max_requests_per_server = 1000
 }
 
 # MODULE CONFIGURATION
