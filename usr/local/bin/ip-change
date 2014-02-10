@@ -1,0 +1,5 @@
+#!/bin/bash
+
+exit 0
+
+# Управление coa делается через глобальный radius, `which coa.sh`
