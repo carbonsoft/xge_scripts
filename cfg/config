@@ -72,6 +72,18 @@ network['if1.tag']=''
 network['if1.type']='ethernet'
 network['if1.vlan']='0'
 
+#if 2
+network['if2.brd']=''
+network['if2.device']='dummy0'
+network['if2.disabled']='0'
+network['if2.gate']=''
+network['if2.ip']='169.1.37.39/8'
+network['if2.name']='Интерфейс Radius CoA'
+network['if2.role']='Local'
+network['if2.tag']=''
+network['if2.type']='ethernet'
+network['if2.vlan']='0'
+
 declare -A httpd
 httpd['internal_port']='80'
 httpd['internal_port.widget']='inputpox "Порт внутреннего веб-сервера XGE" ""'
