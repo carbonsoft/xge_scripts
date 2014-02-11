@@ -50,6 +50,16 @@ xge_nat() {
 	iptables -t nat -A xge_dnat -m set --set xge_redirect_noauth src -j xge_redirect_noauth
 	iptables -t nat -A xge_dnat -m set --set xge_redirect_webauth src -j xge_redirect_webauth
 
+	# default snat for private network
+	iptables -t nat -N xge_default_snat
+	iptables -t nat -A xge_default_snat -s 10.0.0.0/8 -j MASQUERADE
+	iptables -t nat -A xge_default_snat -s 172.16.0.0/12 -j MASQUERADE
+	iptables -t nat -A xge_default_snat -s 192.168.0.0/16 -j MASQUERADE
+
+	if [ "${app['default_snat_enabled']}" = '1' ]; then
+		iptables -t nat -A xge_postrouting -j xge_default_snat
+	fi
+
 	# final link
 	iptables -t nat -A PREROUTING -j xge_dnat
 	iptables -t nat -A POSTROUTING -j xge_postrouting

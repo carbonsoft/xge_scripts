@@ -11,6 +11,8 @@ app['name']='Carbon XGE Router 5'
 app['path']='/app/xge'
 app['ppp-server.ip']='10.0.201.1'
 app['ppp-server.ip.widget']='ip "IP-адрес VPN-серверов" "Не забудьте продублировать в network"'
+app['default_snat_enabled']='1'
+app['default_snat_enabled.widget']='checkbox "Включить NAT серых сетей по умолчанию" "MASQUERADE для 192.168.0.0/16 10.0.0.0/8 и 172.16.0.0/12"'
 app['widget']='menu "Настройки маршрутизатора"'
 
 declare -A vpn
