@@ -152,6 +152,7 @@ iptables_snat_restore() {
 }
 
 firewall_clear() {
+	mkdir -p /var/log/xge /tmp/firewall /var/lock
 	$shaper
 	iptables_cleanup
 	ipset_cleanup
