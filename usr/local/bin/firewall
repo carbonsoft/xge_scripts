@@ -100,12 +100,9 @@ xge_filter() {
 	iptables -t filter -A xge_forward -m state --state ESTABLISHED -j ACCEPT
 	iptables -t filter -A xge_forward -j DROP
 
-	# получение команд от биллинга
-	iptables -t filter -N xge_in_accept
-	iptables -t filter -A xge_in_accept -s ${radclient['authserver']##*:} -p udp --dport 44 -j ACCEPT
-
 	# pptp
-	iptables -t filter -A xge_in_accept -p tcp --dport 1723 -j ACCEPT
+	iptables -t filter -N xge_in_accept
+	iptables -t filter -A xge_in_accept ! -i E+ -p tcp --dport 1723 -j ACCEPT
 	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
 
 	# radius coa, TODO fix range
