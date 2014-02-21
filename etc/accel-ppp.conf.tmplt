@@ -77,11 +77,13 @@ verbose=1
 #padi-limit=0
 #ip-pool=pppoe
 #interface=eth1,padi-limit=1000
-interface=eth0
+ac-name=carbonxge
+service-name=carbonxge
+interface=re:L?[a-z0-9]*,padi-limit=1000
 
 [l2tp]
 verbose=1
-#dictionary=/usr/local/share/accel-ppp/l2tp/dictionary
+dictionary=/usr/local/share/accel-ppp/l2tp/dictionary
 #hello-interval=60
 #timeout=60
 #rtimeout=5
