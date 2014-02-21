@@ -14,6 +14,8 @@ app['ppp-server.ip.widget']='ip "IP-адрес VPN-серверов" "Не за�
 app['default_snat_enabled']='1'
 app['default_snat_enabled.widget']='checkbox "Включить NAT серых сетей по умолчанию" "MASQUERADE для 192.168.0.0/16 10.0.0.0/8 и 172.16.0.0/12"'
 app['widget']='menu "Настройки маршрутизатора"'
+app['enabled']='1'
+app['enabled.widget']='checkbox "Включить XGE Router" "Отключите, если XGE не используется на сервере"'
 
 declare -A vpn
 vpn['widget']='menu "Настройки VPN сервера" ""'
