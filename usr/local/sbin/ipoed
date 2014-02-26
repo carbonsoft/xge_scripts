@@ -1,0 +1,15 @@
+#!/bin/bash
+
+mkdir -p /var/run/xge_auth/
+mkdir -p /var/run/xge_auth_bad/
+
+while true; do
+	[ ! -f /var/run/xge_auth/radattr.* ] && sleep 1 && continue
+	for file in /var/run/xge_auth/radattr.*; do
+		if ! /usr/local/bin/ip-up.ip ${file#*.}; then
+			mv $file /var/run/xge_auth_bad/
+		else
+			rm -f $file
+		fi
+	done
+done

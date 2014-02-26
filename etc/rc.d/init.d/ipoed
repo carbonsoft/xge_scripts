@@ -1,0 +1,77 @@
+#!/bin/bash
+# chkconfig: - 81 15
+# description: Main worker
+
+. /etc/rc.d/init.d/functions
+. /cfg/config
+
+ALREADY_RUN=111
+RETVAL=1
+prog="IPoE daemon"
+PROG="ipoed"
+LOCKFILE="/var/lock/subsys/$PROG"
+
+start() {
+	echo -n $"Starting $prog: "
+	[ -s /var/run/$PROG.pid ] && return 0
+	setsid bash -c "/usr/local/sbin/$PROG -p  /var/run/$PROG.pid" & disown -a
+	RETVAL=$?
+	pid=$!
+	if [ "$RETVAL" = '0' ]; then
+		touch $LOCKFILE
+	fi
+	[ "$RETVAL" != "0" ] && rm -f $LOCKFILE /var/run/$PROG.pid
+	return $RETVAL
+}
+
+stop() {
+	[ "${vpn[enabled]}" = '1' ] || exit 255
+	echo -n $"Stopping $prog: "
+	if [ -s /var/run/$PROG.pid ]; then
+		pid="$(</var/run/$PROG.pid)" && kill $pid
+		RETVAL=$?
+		for i in {1..100}; do
+		    [ ! -d /proc/$pid ] && break
+		    echo -n .
+		    usleep 100000
+		done
+	fi
+	kill -KILL `pidof $PROG` &>/dev/null
+	rm -f $LOCKFILE /var/run/$PROG.pid
+	return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+	start)
+		start
+		RETVAL=$?
+		[ "$RETVAL" = "0" ] && echo_success || echo_failure
+		;;
+	stop)
+		stop
+		RETVAL=$?
+		[ "$RETVAL" = "0" ] && echo_success || echo_failure
+		;;
+	restart)
+		stop && echo_success || echo_failure
+		echo
+		start
+		RETVAL=$?
+		[ "$RETVAL" = '0' ] && echo_success || echo_failure
+		;;
+	condrestart)
+		[ -e "$LOCKFILE" ] && restart
+		RETVAL=$?
+		;;
+	status)
+		status $proc
+		RETVAL=$?
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+		exit 1
+		;;
+esac
+echo
+exit $RETVAL
