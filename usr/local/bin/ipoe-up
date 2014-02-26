@@ -1,0 +1,26 @@
+#!/bin/bash
+
+[ ! -d /var/log/xge/ ] && mkdir /var/log/xge/
+
+n=$'\n'
+LOGFILE=/var/log/xge/sessions.log
+AUTHFILE=/var/run/xge_auth/radattr.$1
+FRAMED_IP_ADDRESS="$(grep ^Framed-IP-Address $AUTHFILE | cut -d ' ' -f2)"
+CTRL_TYPE="IPOE"
+
+echo >> $LOGFILE
+echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: ip-up $@" >> $LOGFILE
+
+while read cmd data; do
+	if [ "$cmd" = 'Filter-Id' ]; then
+		PARAMS="$data"
+		PARAMS=${PARAMS//Framed-IP-Address/$FRAMED_IP_ADDRESS}
+		if out=$(xgesh $PARAMS 2>&1); then
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh ${out//$n/ >>} [   OK   ]"
+		else
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh ${out//$n/ >>} [ FAILED ]"
+		fi
+	fi
+done < $AUTHFILE >> $LOGFILE
+
+xgesh session start $1 $CTRL_TYPE
