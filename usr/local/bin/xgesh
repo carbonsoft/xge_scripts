@@ -109,7 +109,7 @@ session() {
 	session_cmd="$1"
 	shift
 	case "$session_cmd" in
-	info | disconnect | start | stop | test )
+	info | disconnect | start | stop | test | remove )
 		__session_$session_cmd $@
 		;;
 	* )
@@ -173,7 +173,11 @@ __session_stop() {
 
 __session_remove() {
 	#TODO: убивать всё нах (if-down / radius-coa disconnect iptables/ipset)
-	rm -f /var/lib/$session_dir/$ip
+	set -x
+	local ip=$1
+	__session_disconnect $ip
+	rm -f $session_dir/$ip
+	set +x
 }
 
 __session_test() {
@@ -195,6 +199,10 @@ __session_var_get() {
 
 __session_info() {
 	local session_id=$1
+	if [ ! -f $session_dir/$session_id ]; then
+		echo "Session $session_id not found"
+		return 1
+	fi
 	read $session_fields  < $session_dir/$session_id
 	for var in $session_fields; do
 		[ "$var" = "tmp" ] && continue
@@ -238,6 +246,19 @@ __policy_set() {
 	rate_out=${rate_out:-512}
 	ceil_out=${ceil_out:-$rate_out}
 	burst_out=${burst_out:-0}
+
+	if [ $ceil_in = '-1' -o "$ceil_in" = '0' ] && [ $ceil_out = '-1' -o "$ceil_out" = '0' ]; then
+		echo "Remove policy for $ip because of ceil"
+		__policy_remove "$ip"
+		return 0
+	fi
+
+	if [ $rate_in = '-1' -o "$rate_in" = '0' ] && [ $rate_out = '-1' -o "$rate_out" = '0' ]; then
+		echo "Remove policy for $ip because of rate"
+		__policy_remove "$ip"
+		return 0
+	fi
+
 
 	__shaper_add $ip $rate_in $ceil_in $burst_in $rate_out $ceil_out $burst_out
 	[ "$?" = '0' ] && __session_update $ip policy "in $rate_in $ceil_in $burst_in out $rate_out $ceil_out $burst_out"
@@ -360,19 +381,19 @@ __shaper_del() {
 #REFACTORING END
 
 ip() {
+	echo "$FUNCNAME $@"
 	local list="$1"
 	local action="$2"
+	local ip="$3"
 	[ "$action" = '1' ] && action='add'
 	[ "$action" = '0' ] && action='del'
-	local ip="$3"
-	echo "$FUNCNAME $@"
 	[ "${list:0:4}" != "xge_" ] && list=xge_$list
 
-	if  [ "$#" -ge '4' -a "$list" = 'xge_snat' ]; then
-		snatip=$4
-		__snat_tree_del "$3" "$4"
+	if  [ "$#" -ge '3' -a "$list" = 'xge_snat' ]; then
+		snatip=${4:-0.0.0.0}
+		__snat_tree_del "$ip" "$snatip"
 		if [ "$action" = 'add' -o "$action" = 'del' ]; then
-			__snat_tree_$action "$3" "$4"
+			__snat_tree_$action "$ip" "$snatip"
 			return $?
 		fi
 	fi
