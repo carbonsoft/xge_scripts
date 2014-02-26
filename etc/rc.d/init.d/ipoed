@@ -9,26 +9,28 @@ ALREADY_RUN=111
 RETVAL=1
 prog="IPoE daemon"
 PROG="ipoed"
+PIDFILE="/var/run/$PROG.pid"
 LOCKFILE="/var/lock/subsys/$PROG"
+LOGFILE=/var/log/xge/$PROG.log
 
 start() {
 	echo -n $"Starting $prog: "
 	[ -s /var/run/$PROG.pid ] && return 0
-	setsid bash -c "/usr/local/sbin/$PROG -p  /var/run/$PROG.pid" & disown -a
+	setsid bash -c "/usr/local/sbin/$PROG" &>> $LOGFILE & disown -a
 	RETVAL=$?
 	pid=$!
 	if [ "$RETVAL" = '0' ]; then
+		echo $pid > $PIDFILE
 		touch $LOCKFILE
 	fi
-	[ "$RETVAL" != "0" ] && rm -f $LOCKFILE /var/run/$PROG.pid
+	[ "$RETVAL" != "0" ] && rm -f $LOCKFILE $PIDFILE
 	return $RETVAL
 }
 
 stop() {
-	[ "${vpn[enabled]}" = '1' ] || exit 255
 	echo -n $"Stopping $prog: "
-	if [ -s /var/run/$PROG.pid ]; then
-		pid="$(</var/run/$PROG.pid)" && kill $pid
+	if [ -s $PIDFILE ]; then
+		pid="$(<$PIDFILE)" && kill $pid
 		RETVAL=$?
 		for i in {1..100}; do
 		    [ ! -d /proc/$pid ] && break
@@ -37,7 +39,7 @@ stop() {
 		done
 	fi
 	kill -KILL `pidof $PROG` &>/dev/null
-	rm -f $LOCKFILE /var/run/$PROG.pid
+	rm -f $LOCKFILE $PIDFILE
 	return $RETVAL
 }
 
