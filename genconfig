@@ -8,7 +8,7 @@ genconfig() {
 		if [ "${line:0:1}" = "#"  ]; then
 			echo "$line"
 			continue
-		fi      
+		fi
 		while [[ "$line" = *@@@*%%%* ]]; do
 			VARNAME=""
 			VARNAME="${line#*@@@}"
@@ -86,10 +86,15 @@ gen_accel_pppd_config() {
 gen_httpd_config() {
 	conffile=/etc/httpd/conf/httpd.conf
 	tmpltfile=/skelet/etc/httpd/conf/httpd.conf.tmplt
-	internal_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['internal_port']}"
-	redirect_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['redirect_port']}"
-	noauth_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['redirect_noauth_port']}"
-	webauth_httpd_ip_port="${network[if1.ip]%%/*}:${httpd['redirect_webauth_port']}"
+
+	internal_httpd_ip_port=${httpd['internal_ip']}:80
+	redirect_httpd_ip_port=${httpd['redirect_ip']}:80
+	noauth_httpd_ip_port=${httpd['redirect_noauth_ip']}:80
+	webauth_httpd_ip_port=${httpd['redirect_webauth_ip']}:80
+
+	for i in internal_ip redirect_ip redirect_noauth_ip redirect_webauth_ip; do
+		ip addr add ${httpd[$i]}/8 dev dummy0
+	done &>/dev/null
 	genconfig
 
 	# redirect part
@@ -108,6 +113,15 @@ gen_httpd_config() {
 	URL="${httpd['redirect_webauth_page']}"
 	conffile="/var/www/html/webauth/.htaccess"
 	tmpltfile="/var/www/html/webauth/.htaccess.tmplt"
+	genconfig
+
+	authserver="${radclient[authserver]}"
+	auth_port=${authserver##*:}
+	server=${authserver%%:*}
+	secret="${radclient[secret]}"
+	users_psw="${radclient[users_psw]}"
+	conffile="/var/www/html/noauth/noauth.php"
+	tmpltfile="/var/www/html/noauth/noauth.php.tmplt"
 	genconfig
 }
 
