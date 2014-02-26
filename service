@@ -14,6 +14,7 @@ start() {
 	__exec /etc/init.d/radiusd start
 	__exec /etc/init.d/accel-pppd start
 	__exec /etc/init.d/nfusens start
+	__exec /etc/rc.d/init.d/ipoed start
 	return $retval
 	
 }
@@ -26,6 +27,7 @@ stop() {
 	__exec /etc/init.d/accel-pppd stop
 	__exec /etc/init.d/nfusens stop
 	__exec /etc/init.d/crond stop
+	__exec /etc/rc.d/init.d/ipoed stop
 	return $retval
 }
 
