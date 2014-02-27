@@ -1,1 +1,1 @@
-RedirectMatch 302 ^.*$ @@@URL%%%
+RedirectMatch 302 (.*)/(?!redirect.php)(.*) /redirect.php?url=$2
