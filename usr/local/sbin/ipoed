@@ -7,7 +7,7 @@ mkdir -p /var/run/xge_auth_bad/
 while true; do
 	[ ! -f /var/run/xge_auth/radattr.* ] && sleep 1 && echo -n .  && continue
 	for file in /var/run/xge_auth/radattr.*; do
-		if ! /usr/local/bin/ip-up.ip ${file#*.}; then
+		if ! /usr/local/bin/ipoe-up ${file#*.}; then
 			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: $file bad"
 			mv $file /var/run/xge_auth_bad/
 		else
