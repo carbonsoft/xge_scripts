@@ -1,8 +1,8 @@
 #!/bin/bash
 
 export PATH=$PATH:/usr/local/bin/:/usr/local/sbin/
-mkdir -p /var/run/xge_auth/
-mkdir -p /var/run/xge_auth_bad/
+mkdir -p /var/run/xge_auth/ /var/run/xge_auth_bad/
+chmod a+rw /var/run/xge_auth/ /var/run/xge_auth_bad/
 
 while true; do
 	[ ! -f /var/run/xge_auth/radattr.* ] && sleep 1 && echo -n .  && continue
