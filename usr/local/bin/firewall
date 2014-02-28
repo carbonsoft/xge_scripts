@@ -1,11 +1,13 @@
 #!/bin/bash
 
 trap _exit EXIT
-_exit(){
+
+_exit() {
 	local ret=$?
 	rm -f /tmp/firewall/*.$$
 	return $ret
 }
+
 . /cfg/config
 . /usr/local/lib/carbon_firewall_lib
 
@@ -28,26 +30,26 @@ xge_nat() {
 	iptables -t nat -N xge_redirect_webauth
 
 	# redirect
-	iptables -t nat -A xge_redirect -p tcp -m addrtype --dst-type LOCAL -j RETURN
+	iptables -t nat -A xge_redirect -m addrtype --dst-type LOCAL -j RETURN
 	iptables -t nat -A xge_redirect -p udp --dport 53 -j RETURN
-	iptables -t nat -A xge_redirect -p tcp --dport 80 -j DNAT --to-dest ${network['if1.ip']%%/*}:${httpd['redirect_port']}
+	iptables -t nat -A xge_redirect -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_ip']}:80
 	iptables -t nat -A xge_redirect -j $NAT_DROP
 
 	# noauth
-	iptables -t nat -A xge_redirect_noauth -p tcp -m addrtype --dst-type LOCAL -j RETURN
+	iptables -t nat -A xge_redirect_noauth -m addrtype --dst-type LOCAL -j RETURN
 	iptables -t nat -A xge_redirect_noauth -p udp --dport 53 -j RETURN
-	iptables -t nat -A xge_redirect_noauth -p tcp --dport 80 -j DNAT --to-dest ${network['if1.ip']%%/*}:${httpd['redirect_noauth_port']}
+	iptables -t nat -A xge_redirect_noauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_noauth_ip']}:80
 	iptables -t nat -A xge_redirect_noauth -j $NAT_DROP
 
 	# webauth
-	iptables -t nat -A xge_redirect_webauth -p tcp -m addrtype --dst-type LOCAL -j RETURN
+	iptables -t nat -A xge_redirect_webauth -m addrtype --dst-type LOCAL -j RETURN
 	iptables -t nat -A xge_redirect_webauth -p udp --dport 53 -j RETURN
-	iptables -t nat -A xge_redirect_webauth -p tcp --dport 80 -j DNAT --to-dest ${network['if1.ip']%%/*}:${httpd['redirect_webauth_port']}
+	iptables -t nat -A xge_redirect_webauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_webauth_ip']}:80
 	iptables -t nat -A xge_redirect_webauth -j $NAT_DROP
 
 	# links in xge_dnat
+	iptables -t nat -A xge_dnat -m set ! --set xge_forward_allow src -j xge_redirect_noauth
 	iptables -t nat -A xge_dnat -m set --set xge_redirect src  -j xge_redirect
-	iptables -t nat -A xge_dnat -m set --set xge_redirect_noauth src -j xge_redirect_noauth
 	iptables -t nat -A xge_dnat -m set --set xge_redirect_webauth src -j xge_redirect_webauth
 
 	# default snat for private network
@@ -80,7 +82,6 @@ xge_ipset() {
 	ipset create xge_mangle_accept hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_nat_default hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_redirect hash:ip family inet hashsize 65536 maxelem 65536
-	ipset create xge_redirect_noauth hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_redirect_webauth hash:ip family inet hashsize 65536 maxelem 65536
 }
 
@@ -104,6 +105,11 @@ xge_filter() {
 	iptables -t filter -N xge_in_accept
 	iptables -t filter -A xge_in_accept ! -i E+ -p tcp --dport 1723 -j ACCEPT
 	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
+
+	# auth
+	[ -n "${httpd['redirect_ip']}" ] && iptables -t filter -A xge_in_accept -d ${httpd['redirect_ip']} -j ACCEPT
+	[ -n "${httpd['redirect_noauth_ip']}" ] && iptables -t filter -A xge_in_accept -d ${httpd['redirect_noauth_ip']} -j ACCEPT
+	[ -n "${httpd['redirect_webauth_ip']}" ] && iptables -t filter -A xge_in_accept -d ${httpd['redirect_webauth_ip']} -j ACCEPT
 
 	# radius coa, TODO fix range
 	if [ -n "${radclient['coa_client.ip']}" -a -n "${radclient['coa_server.port']}" ]; then
