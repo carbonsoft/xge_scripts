@@ -104,12 +104,15 @@ __session_id_unlock() {
 	rm -f $session_lock
 }
 
+__session_list() {
+	ls /var/lib/xge_sessions/
+}
 
 session() {
 	session_cmd="$1"
 	shift
 	case "$session_cmd" in
-	info | disconnect | start | stop | test | remove )
+	info | disconnect | start | stop | test | remove | list )
 		__session_$session_cmd $@
 		;;
 	* )
