@@ -110,19 +110,19 @@ gen_httpd_config() {
 	# redirect part
 	URL="${httpd['redirect_page']}"
 	conffile="/var/www/html/redirect/.htaccess"
-	tmpltfile="/var/www/html/redirect/.htaccess.tmplt"
+	tmpltfile="/skelet/var/www/html/redirect/.htaccess.tmplt"
 	genconfig
 
 	# noauth part
 	URL="${httpd['redirect_noauth_page']}"
 	conffile="/var/www/html/noauth/.htaccess"
-	tmpltfile="/var/www/html/noauth/.htaccess.tmplt"
+	tmpltfile="/skelet/var/www/html/noauth/.htaccess.tmplt"
 	genconfig
 
 	# webauth part
 	URL="${httpd['redirect_webauth_page']}"
 	conffile="/var/www/html/webauth/.htaccess"
-	tmpltfile="/var/www/html/webauth/.htaccess.tmplt"
+	tmpltfile="/skelet/var/www/html/webauth/.htaccess.tmplt"
 	genconfig
 
 	authserver="${radclient[authserver]}"
@@ -131,7 +131,7 @@ gen_httpd_config() {
 	secret="${radclient[secret]}"
 	users_psw="${radclient[users_psw]}"
 	conffile="/var/www/html/noauth/noauth.php"
-	tmpltfile="/var/www/html/noauth/noauth.php.tmplt"
+	tmpltfile="/skelet/var/www/html/noauth/noauth.php.tmplt"
 	genconfig
 }
 
