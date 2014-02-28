@@ -78,6 +78,10 @@ gen_accel_pppd_config() {
 	nas_identifier="${radclient[nas_identifier]:-$first_ip}"
 	ppp_server_ip=${app['ppp-server.ip']}
 
+	for ip in ${app['ppp-server.ip']}/32 $nas_identifier/8; do
+		ip addr add $ip dev dummy0
+	done &>/dev/null
+
 	[ "${vpn['pptp.enabled']}" = '1' ] && pptp_string=pptp
 	[ "${vpn['pppoe.enabled']}" = '1' ] && pppoe_string=pppoe
 	[ "${vpn['l2tp.enabled']}" = '1' ] && l2tp_string=l2tp
