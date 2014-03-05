@@ -3,6 +3,8 @@
 CONFIG=/cfg/config
 . $CONFIG
 
+ip_regex='([0-9]{1,3}\.){3}[0-9]{1,3}'
+
 genconfig() {
 	while IFS= read -r line; do
 		if [ "${line:0:1}" = "#"  ]; then
@@ -21,8 +23,12 @@ genconfig() {
 	done < $tmpltfile >$conffile
 }
 
+get_all_local_ip() {
+	ip -o addr | egrep  "L[a-z0-9]+\s*\<inet\>" | egrep -o $ip_regex
+}
+
 get_first_local_ip() {
-	ip -o addr | egrep -m2  "L[a-z0-9]+" | egrep -o -m1 '([0-9]{1,3}\.){3}[0-9]{1,3}'
+	ip -o addr | egrep  "L[a-z0-9]+\s*\<inet\>" | egrep -o -m1 $ip_regex
 }
 
 gen_radius_config() {
@@ -136,11 +142,25 @@ gen_httpd_config() {
 }
 
 
+
+gen_named_conf() {
+	leth_list="$(get_all_local_ip)"
+	if [ "${vpn['enabled']}" = '1' ]; then
+		leth_list="$leth_list ${app['ppp-server.ip']}"
+	fi
+	leth_list="$(echo $leth_list | sed -re 's/\s|$/;&/g')"
+	conffile=/etc/named.conf
+	tmpltfile=/skelet/etc/named.conf.tmplt
+
+	genconfig
+}
+
 main() {
 	gen_httpd_config
 	gen_accel_pppd_config
 	gen_radius_config
 	gen_hosts_file
+	gen_named_conf
 }
 
 main $@
