@@ -197,7 +197,6 @@ start() {
 	xge_filter
 	xge_mangle
 	restore
-	echo "TODO оптимизировать конфиг accell"
 }
 
 stop() {
