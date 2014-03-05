@@ -17,8 +17,12 @@ config=/var/lib/users.dat
 usersd=/usr/local/sbin/firewall_usersd
 shaper=/usr/local/bin/shaper.sh
 
+
+ip_regex='([0-9]{1,3}\.){3}[0-9]{1,3}'
+
 xge_nat() {
 	NAT_DROP=" DNAT --to-dest 169.169.169.169"
+	local local_ip="$(ip -o addr | egrep  "L[a-z0-9]+\s*\<inet\>" | egrep -o -m1 $ip_regex)"
 	iptables -t nat -N xge_postrouting
 	iptables -t nat -N xge_user2snat
 	iptables -t nat -A xge_postrouting -j xge_user2snat
@@ -37,7 +41,7 @@ xge_nat() {
 
 	# noauth
 	iptables -t nat -A xge_redirect_noauth -m addrtype --dst-type LOCAL -j RETURN
-	iptables -t nat -A xge_redirect_noauth -p udp --dport 53 -j RETURN
+	iptables -t nat -A xge_redirect_noauth -p udp --dport 53 -j DNAT --to-dest $local_ip:53
 	iptables -t nat -A xge_redirect_noauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_noauth_ip']}:80
 	iptables -t nat -A xge_redirect_noauth -j $NAT_DROP
 
@@ -105,6 +109,9 @@ xge_filter() {
 	iptables -t filter -N xge_in_accept
 	iptables -t filter -A xge_in_accept ! -i E+ -p tcp --dport 1723 -j ACCEPT
 	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
+
+	# dns
+	iptables -t filter -A xge_in_accept -p udp --dport 53 -j ACCEPT
 
 	# auth
 	[ -n "${httpd['redirect_ip']}" ] && iptables -t filter -A xge_in_accept -d ${httpd['redirect_ip']} -j ACCEPT
