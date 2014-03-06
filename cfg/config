@@ -83,7 +83,7 @@ declare -A nfusens
 nfusens['widget']='menu "Настройки сенсора netflow" ""'
 nfusens['enabled.widget']='checkbox "Включить nfusens" "Без него XGE-Router не будет корректно работать"'
 nfusens['enabled']='1'
-nfusens['collector']='10.90.10.4:9996'
+nfusens['collector']='169.1.99.96:9996'
 nfusens['collector.widget']='inputbox "Сервер сборки статистики" "Адрес netflow-коллектора: IP:PORT"'
 
 declare -A radclient
