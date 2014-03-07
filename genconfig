@@ -31,6 +31,10 @@ get_first_local_ip() {
 	ip -o addr | egrep  "L[a-z0-9]+\s*\<inet\>" | egrep -o -m1 $ip_regex
 }
 
+get_app_list() {
+	tail -1 <<< "$(sed -re 's/^.*"apps": \[|].*$|[,"]//g;' /var/reg/*.reg)"
+}
+
 gen_radius_config() {
 	local first_ip="$(get_first_local_ip)"
 	# radiusclient и servers
@@ -40,6 +44,11 @@ gen_radius_config() {
 	secret="${radclient['secret']}"
 	nas_identifier="${radclient['nas_identifier']:-$first_ip}"
 	coa_client_ip="${radclient['coa_client.ip']}"
+	for sys_app in $(get_app_list); do
+		if [ "$sys_app" = 'asr_billing' ]; then
+			coa_client_ip="$nas_identifier"
+		fi
+	done
 	coa_server_port="${radclient['coa_server.port']:-3799}"
 	coa_client_passwd="${radclient['coa_client.passwd']}"
 
