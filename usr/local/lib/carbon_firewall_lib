@@ -184,3 +184,7 @@ reset() {
 	firewall_clear
 	restart
 }
+
+get_app_list() {
+	tail -1 <<< "$(sed -re 's/^.*"apps": \[|].*$|[,"]//g;' /var/reg/*.reg)"
+}
