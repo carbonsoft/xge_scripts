@@ -121,6 +121,16 @@ xge_filter() {
 	# radius coa, TODO fix range
 	if [ -n "${radclient['coa_client.ip']}" -a -n "${radclient['coa_server.port']}" ]; then
 		iptables -t filter -A xge_in_accept -s "${radclient['coa_client.ip']}" -p udp --dport "${radclient['coa_server.port']}" -j ACCEPT
+		# in billing_softrouter we have routing issue, if we have 169.1.37.99 on dummy
+		# we gonna connect to it with same src - 169.1.37.99
+		# so accept nas_identifier ip so as src, so as dst
+		for sys_app in $(get_app_list); do
+			if [ "$sys_app" = 'asr_billing' ]; then
+				iptables -t filter -A xge_in_accept -i lo -d "${radclient['nas_identifier']}" -p udp --sport "${radclient['coa_server.port']}" -j ACCEPT
+				iptables -t filter -A xge_in_accept -i lo -s "${radclient['nas_identifier']}" -p udp --dport "${radclient['coa_server.port']}" -j ACCEPT
+				break
+			fi
+		done
 	fi
 
 	iptables -t filter -I INPUT -j xge_in_accept
