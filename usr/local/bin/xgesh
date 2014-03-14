@@ -504,15 +504,64 @@ __mac_show() {
 	arp -n | grep -w $1
 }
 
+help() {
+	echo 'Usage: xgesh OBJECT { COMMAND }'
+	echo '       where  OBJECT := { ip | filter | nat | mangle | session | policy | mac }'
+	echo '	       and  COMMANDS := {'
+	echo '		    # access'
+	echo '		    	# allow forward traffic (give access:)'
+	echo '			    ip forward_allow add <IP>'
+	echo '			    ip forward_allow 1 <IP>'
+	echo '		    	# remove forward traffic (give access:)'
+	echo '			    ip forward_allow del <IP>'
+	echo '			    ip forward_allow 0 <IP>'
+	echo '		    # nat'
+	echo '		    	# add snat address to user:'
+	echo '			    ip snat add <IP> <SNAT_IP>'
+	echo '			    ip snat 0 <IP> <SNAT_IP>'
+	echo '		    	# remove snat address from user:'
+	echo '			    ip snat del <IP>'
+	echo '			    ip snat add <IP> 0.0.0.0'
+	echo '			    ip snat 0 <IP>'
+	echo '			    ip snat 1 <IP> 0.0.0.0'
+	echo '		    # mac'
+	echo '		    	# set mac binding:'
+	echo '			    mac set <IP> <MAC>'
+	echo '		    	# set mac binding:'
+	echo '			    mac remove <IP>'
+	echo '		    # shapers'
+	echo '		    	# set shaper:'
+	echo '			    policy set <IP> in <RATE_IN> <CEIL_IN> <BURST_IN> out <RATE_OUT> <CEIL_OUT> <BURST_OUT>'
+	echo '			    policy set <IP> in <RATE_IN> <CEIL_IN> out <RATE_OUT> <CEIL_OUT>'
+	echo '			    policy set <IP> in <RATE_IN> out <RATE_OUT>'
+	echo '		    	# remove forward traffic (give access:)'
+	echo '			    policy remove <IP>'
+	echo '		    # redirects'
+	echo '			# add redirect to negative balance page'
+	echo '			    ip redirect add <IP>'
+	echo '			    ip redirect 1 <IP>'
+	echo '			# remove redirect to negative balance page'
+	echo '			    ip redirect del <IP>'
+	echo '			    ip redirect 0 <IP>'
+	echo '		    # sessions'
+	echo '			# list of all sessions'
+	echo '			    session list'
+	echo '			# fast info about session'
+	echo '			    session info <IP>'
+	echo '			# session diagnostic, getting info from iptables/ipset/tc/etc, slowly'
+	echo '			    session test <IP>'
+}
+
 cmd() {
 	local retval=0
 	prepare
 	cmd=$1
 	shift
 	session_lock=${@//[^0-9 .]/}
+	[ "$cmd" = 'help' ] && session_lock='0000000000000000000'
 	session_lock=/var/lock/xge_${session_lock%% *}.lock
 	case $cmd in
-	ip | filter | nat | mangle | session | policy | mac )
+	ip | filter | nat | session | policy | mac | help )
 		exec 22>$session_lock
 		__session_id_lock
 		$cmd $@
