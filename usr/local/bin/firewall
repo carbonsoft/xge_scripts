@@ -9,9 +9,9 @@ _exit() {
 }
 
 . /cfg/config
+app=${app['appname']}
 . /usr/local/lib/carbon_firewall_lib
 
-app=${app['appname']}
 
 config=/var/lib/users.dat
 usersd=/usr/local/sbin/firewall_usersd
