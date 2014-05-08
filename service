@@ -4,10 +4,19 @@
 __exec() {
 	$@ || ((retval++))
 }
+copy_user_skelet() {
+        local dir
+        local app=xge
+        for dir in /cfg/*; do
+                [ ! -d "$dir" ] && continue
+                cp -a "$dir/*" "${dir/cfg}/"
+        done
+}
 
 start() {
 	retval=0
 	__exec /genconfig
+	copy_user_skelet
 	__exec /etc/init.d/crond start
 	__exec /usr/local/bin/firewall start 
 	__exec /etc/init.d/httpd start
