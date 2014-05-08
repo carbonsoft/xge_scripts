@@ -214,6 +214,7 @@ start() {
 	xge_filter
 	xge_mangle
 	restore
+	[ -x /usr/local/bin/firewall_hook ] && /usr/local/bin/firewall_hook || return 0
 }
 
 stop() {
