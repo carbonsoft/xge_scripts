@@ -9,7 +9,7 @@ copy_user_skelet() {
         local app=xge
         for dir in /cfg/*; do
                 [ ! -d "$dir" ] && continue
-                cp -a "$dir/*" "${dir/cfg}/"
+                cp -a $dir/* "${dir/cfg}/"
         done
 }
 
