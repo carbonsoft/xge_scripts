@@ -38,19 +38,7 @@ vpn['auth.mschap2.widget']='checkbox "Включить MS-CHAP v2" ""'
 
 declare -A network
 network['widget']='menu "Настройка сети" "Настройка сети"'
-
-#общие для всех интерфейсов виджеты
-network['if.widget']='table "Настройка интерфейсов" "Настройки интерфейса: ip/mask, gate"'
-network['if']=''
-network['if.ip.widget']='inputbox "IP адрес интерфейса" "IP адрес интерфейса и маска, формат 10.90.140.10/24"'
-network['if.name.widget']='inputbox "Имя интерфейса" "Имя интерфейса, например Внешний интерфейс"'
-network['if.gate.widget']='inputbox "IP адрес шлюза" "IP адрес шлюза, например 10.0.0.1"'
-network['if.disabled.widget']='checkbox "Отключить интерфейс" "Включить/выключить интерфейс"'
-network['if.device.widget']='interface_list "Физический интерфейс" "Физический интерфейс, например eth0/eth1"'
-network['if.brd.widget']='inputbox "Бродкаст адрес" "Необходимо только для vlan"'
-network['if.tag.widget']='inputbox "Тэг vlan" "Необходимо только для vlan"'
-network['if.role.widget']='radiolist "Роль интерфейса" "External - внешний, Local - внутренний"'
-network['if.role.list']='"External" "Внешний" "Для доступа к вышестоящему провайдеру" "Local" "Внутренний" "Для подключений абонентов"'
+network['if0.ip']=''
 
 declare -A httpd
 httpd['internal_ip']='169.0.80.90'
