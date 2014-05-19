@@ -9,9 +9,9 @@ _exit() {
 }
 
 . /cfg/config
+app=${app['appname']}
 . /usr/local/lib/carbon_firewall_lib
 
-app=${app['appname']}
 
 config=/var/lib/users.dat
 usersd=/usr/local/sbin/firewall_usersd
@@ -214,6 +214,7 @@ start() {
 	xge_filter
 	xge_mangle
 	restore
+	[ -x /usr/local/bin/firewall_hook ] && /usr/local/bin/firewall_hook || return 0
 }
 
 stop() {
