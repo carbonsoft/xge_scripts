@@ -58,9 +58,9 @@ xge_nat() {
 
 	# default snat for private network
 	iptables -t nat -N xge_default_snat
-	iptables -t nat -A xge_default_snat -s 10.0.0.0/8 -j MASQUERADE
-	iptables -t nat -A xge_default_snat -s 172.16.0.0/12 -j MASQUERADE
-	iptables -t nat -A xge_default_snat -s 192.168.0.0/16 -j MASQUERADE
+	iptables -t nat -A xge_default_snat -m addrtype ! --dst-type LOCAL -s 10.0.0.0/8 -j MASQUERADE
+	iptables -t nat -A xge_default_snat -m addrtype ! --dst-type LOCAL -s 172.16.0.0/12 -j MASQUERADE
+	iptables -t nat -A xge_default_snat -m addrtype ! --dst-type LOCAL -s 192.168.0.0/16 -j MASQUERADE
 
 	if [ "${app['default_snat_enabled']}" = '1' ]; then
 		iptables -t nat -A xge_postrouting -j xge_default_snat
