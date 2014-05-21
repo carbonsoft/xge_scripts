@@ -5,7 +5,7 @@ if [ "$1" = "nochroot" ]; then
 	exit 0
 fi
 
-
+export PATH=$PATH:/usr/local/bin/
 CONFIG=/cfg/config
 . $CONFIG
 
@@ -39,6 +39,12 @@ get_first_local_ip() {
 
 get_app_list() {
 	tail -1 <<< "$(sed -re 's/^.*"apps": \[|].*$|[,"]//g;' /var/reg/*.reg)"
+}
+
+get_pppoe_interfaces() {
+	for dev in $(network_parser lan_interfaces); do
+		echo "interface=$dev,padi-limit=1000"
+	done
 }
 
 gen_radius_config() {
@@ -85,7 +91,7 @@ gen_hosts_file() {
 }
 
 gen_accel_pppd_config() {
-	local first_ip="$(get_first_local_ip)"
+	local first_ip="$(network_parser first_local_ip)"
 	conffile=/etc/accel-ppp.conf
 	tmpltfile=/skelet/etc/accel-ppp.conf.tmplt
 	acctserver="${radclient[acctserver]}"
@@ -98,6 +104,7 @@ gen_accel_pppd_config() {
 	secret="${radclient[secret]}"
 	nas_identifier="${radclient[nas_identifier]:-$first_ip}"
 	ppp_server_ip=${app['ppp-server.ip']}
+	interface="$(get_pppoe_interfaces)"
 
 	for ip in ${app['ppp-server.ip']}/32 $nas_identifier/8; do
 		ip addr add $ip dev dummy0

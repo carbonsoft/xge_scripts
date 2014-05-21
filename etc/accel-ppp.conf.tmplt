@@ -79,7 +79,7 @@ verbose=1
 #interface=eth1,padi-limit=1000
 ac-name=carbonxge
 service-name=carbonxge
-interface=re:L?[a-z0-9]*,padi-limit=1000
+@@@interface%%%
 
 [l2tp]
 verbose=1
