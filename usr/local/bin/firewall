@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export PATH=$PATH:/usr/local/bin/
 trap _exit EXIT
 
 _exit() {
@@ -22,7 +23,7 @@ ip_regex='([0-9]{1,3}\.){3}[0-9]{1,3}'
 
 xge_nat() {
 	NAT_DROP=" DNAT --to-dest 169.169.169.169"
-	local local_ip="$(ip -o addr | egrep  "L[a-z0-9]+\s*\<inet\>" | egrep -o -m1 $ip_regex)"
+	local local_ip="$(network_parser first_local_ip)"
 	iptables -t nat -N xge_postrouting
 	iptables -t nat -N xge_user2snat
 	iptables -t nat -A xge_postrouting -j xge_user2snat
@@ -90,6 +91,22 @@ xge_ipset() {
 }
 
 xge_filter() {
+	# жаль L+ / E+ не прижились, теперь это таргеты
+	iptables -N xge_wan_accept
+	iptables -N xge_lan_accept
+	iptables -N xge_wan_drop
+	iptables -N xge_lan_drop
+
+	for dev in $(network_parser wan_interfaces); do
+		iptables -A xge_wan_accept -i $dev -j ACCEPT
+		iptables -A xge_lan_accept -i $dev -j RETURN
+		iptables -A xge_wan_drop -i $dev -j ACCEPT
+		iptables -A xge_lan_drop -i $dev -j RETURN
+	done
+
+	iptables -A xge_lan_accept -j ACCEPT
+	iptables -A xge_lan_drop -j ACCEPT
+
 	# цепочка для ULOG для nfusens
 	iptables -t filter -N xge_forward
 	iptables -t filter -A FORWARD -j xge_forward
@@ -107,7 +124,7 @@ xge_filter() {
 
 	# pptp
 	iptables -t filter -N xge_in_accept
-	iptables -t filter -A xge_in_accept ! -i E+ -p tcp --dport 1723 -j ACCEPT
+	iptables -t filter -A xge_in_accept -p tcp --dport 1723 -j xge_lan_accept
 	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
 
 	# dns
@@ -143,8 +160,8 @@ create_connlimit() {
 		iptables -t mangle -F xge_new_limit_l_tcp
 		iptables -t mangle -N xge_new_limit_l_udp
 		iptables -t mangle -F xge_new_limit_l_udp
-		iptables -t mangle -A xge_state_new ! -i E+ -p tcp --dport  1024: -j xge_new_limit_l_tcp
-		iptables -t mangle -A xge_state_new ! -i E+ -p udp --dport  1024: -j xge_new_limit_l_udp
+		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_l_tcp
+		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_l_udp
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 5190 -j RETURN
 
@@ -168,8 +185,8 @@ create_connlimit() {
 		iptables -t mangle -F xge_new_limit_e_tcp
 		iptables -t mangle -N xge_new_limit_e_udp
 		iptables -t mangle -F xge_new_limit_e_udp
-		iptables -t mangle -A xge_state_new ! -i E+ -p tcp --dport  1024: -j xge_new_limit_e_tcp
-		iptables -t mangle -A xge_state_new ! -i E+ -p udp --dport  1024: -j xge_new_limit_e_udp
+		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_e_tcp
+		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_e_udp
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 5190 -j RETURN
 

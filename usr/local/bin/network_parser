@@ -1,0 +1,58 @@
+#!/bin/bash
+
+. /etc/init.d/functions
+set -eu
+
+interfaces() {
+	cd /etc/sysconfig/network-scripts/
+	ls ifcfg* | \
+	LANG=C sed -e "$__sed_discard_ignored_files" \
+	-e '/\(ifcfg-lo$\|:\|ifcfg-.*-range\)/d' \
+	-e '/ifcfg-[A-Za-z0-9#\._-]\+$/ { s/^ifcfg-//g;s/[0-9]/ &/}' | \
+	LANG=C sort -k 1,1 -k 2n | \
+	LANG=C sed 's/ //'
+}
+
+value_from_file() {
+	grep $1 /etc/sysconfig/network-scripts/ifcfg-$2 | cut -d '=' -f2
+}
+
+first_local_ip() {
+	for dev in $(interfaces); do
+		if [ "$(value_from_file ROLE $dev)" = LAN -a -n "$(value_from_file IPADDR $dev)" ]; then
+			value_from_file IPADDR $dev
+			break
+		fi
+	done
+}
+
+lan_interfaces() {
+	for dev in $(interfaces); do
+		if [ "$(value_from_file ROLE $dev)" != 'WAN' ]; then
+			echo $dev
+		fi
+	done
+}
+
+wan_interfaces() {
+	for dev in $(interfaces); do
+		if [ "$(value_from_file ROLE $dev)" = 'WAN' ]; then
+			echo $dev
+		fi
+	done
+}
+
+case $1 in
+interfaces | lan_interfaces | wan_interfaces )
+	$1
+	;;
+first_local_ip )
+	first_local_ip
+	;;
+value_from_file )
+	value_from_file "$2" "$3"
+	;;
+* )
+	exit 0
+	;;
+esac
