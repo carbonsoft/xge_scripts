@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "$1" = "nochroot" ]; then
+	cp -a /etc/sysconfig/network-scripts/* /app/xge/etc/sysconfig/network-scripts/
+	exit 0
+fi
+
+
 CONFIG=/cfg/config
 . $CONFIG
 
