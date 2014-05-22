@@ -14,12 +14,12 @@ interfaces() {
 }
 
 value_from_file() {
-	grep $1 /etc/sysconfig/network-scripts/ifcfg-$2 | cut -d '=' -f2
+	grep ^$1 /etc/sysconfig/network-scripts/ifcfg-$2 | cut -d '=' -f2
 }
 
 first_local_ip() {
 	for dev in $(interfaces); do
-		if [ "$(value_from_file ROLE $dev)" = LAN -a -n "$(value_from_file IPADDR $dev)" ]; then
+		if [ "$(value_from_file ROLE $dev)" = LAN -a -n "$(value_from_file IPADDR $dev)" -a "$(value_from_file ONBOOT $dev)" = 'yes' ]; then
 			value_from_file IPADDR $dev
 			break
 		fi
@@ -28,7 +28,7 @@ first_local_ip() {
 
 lan_interfaces() {
 	for dev in $(interfaces); do
-		if [ "$(value_from_file ROLE $dev)" != 'WAN' ]; then
+		if [ "$(value_from_file ROLE $dev)" != 'WAN' -a "$(value_from_file ONBOOT $dev)" = 'yes' ]; then
 			echo $dev
 		fi
 	done
@@ -36,7 +36,7 @@ lan_interfaces() {
 
 wan_interfaces() {
 	for dev in $(interfaces); do
-		if [ "$(value_from_file ROLE $dev)" = 'WAN' ]; then
+		if [ "$(value_from_file ROLE $dev)" = 'WAN' -a "$(value_from_file ONBOOT $dev)" = 'yes' ]; then
 			echo $dev
 		fi
 	done
