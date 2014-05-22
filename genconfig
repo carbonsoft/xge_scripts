@@ -1,6 +1,7 @@
 #!/bin/bash
 
 if [ "$1" = "nochroot" ]; then
+	rm -f /app/xge/etc/sysconfig/network-scripts/*
 	cp -a /etc/sysconfig/network-scripts/* /app/xge/etc/sysconfig/network-scripts/
 	exit 0
 fi
