@@ -226,6 +226,7 @@ xge_mangle() {
 
 start() {
 	firewall_clear
+	set_proc_values.sh
 	xge_ipset
 	xge_nat
 	xge_filter
