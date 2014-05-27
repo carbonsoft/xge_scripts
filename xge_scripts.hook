@@ -1,9 +1,11 @@
 #!/bin/bash
+
+. /devel/bin/common.hook
 DST=$ro_image/
 echo "Изменился $PROG"
 echo "Копирую в $DST"
 rm -rf $ro_image/root
 mkdir -p $ro_image/root
-rsync -urcpogl $APP/src/$PROG/* $DST
+rsync $RSYNC_OPTS $APP/src/$PROG/* $DST
 chmod 440 $ro_image/etc/sudoers
 echo "#TODO: sudoers usage"
