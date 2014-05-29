@@ -30,10 +30,6 @@ genconfig() {
 	done < $tmpltfile >$conffile
 }
 
-get_all_local_ip() {
-	ip -o addr | egrep  "L[a-z0-9]+\s*\<inet\>" | egrep -o $ip_regex
-}
-
 get_first_local_ip() {
 	ip -o addr | egrep  "L[a-z0-9]+\s*\<inet\>" | egrep -o -m1 $ip_regex
 }
@@ -167,7 +163,7 @@ gen_httpd_config() {
 
 
 gen_named_conf() {
-	leth_list="$(get_all_local_ip)"
+	leth_list="$(network_parser lan_ip)"
 	if [ "${vpn['enabled']}" = '1' ]; then
 		leth_list="$leth_list ${app['ppp-server.ip']}"
 	fi
