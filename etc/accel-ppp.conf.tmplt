@@ -35,17 +35,18 @@ log-error=/var/log/accel-ppp/core.log
 thread-count=1
 
 [common]
-#single-session=replace
+single-session=replace
 #sid-case=upper
 #sid-source=seq
 
 [ppp]
 verbose=1
-min-mtu=1280
+min-mtu=300
 mtu=1400
 mru=1400
 # carbon: ccp=0 allow connect from linux devices
 ccp=0
+#это сделает радиус и скрипт событий иначе никак не переподключиться будет check-ip=1
 check-ip=0
 #mppe=require
 ipv4=require
@@ -53,10 +54,11 @@ ipv6=deny
 ipv6-intf-id=0:0:0:1
 ipv6-peer-intf-id=0:0:0:2
 ipv6-accept-peer-intf-id=1
-lcp-echo-interval=20
-#lcp-echo-failure=3
-lcp-echo-timeout=120
-#unit-cache=1000
+lcp-echo-interval=30
+lcp-echo-failure=10
+#lcp-echo-timeout=120
+#unit-cache=2000
+max-configure=30
 
 [auth]
 #any-login=0
@@ -77,9 +79,9 @@ verbose=1
 #padi-limit=0
 #ip-pool=pppoe
 #interface=eth1,padi-limit=1000
-ac-name=carbonxge
-service-name=carbonxge
-@@@interface%%%
+ac-name=@@@hostname%%%
+service-name=@@@hostname%%%
+interface=re:L?[a-z0-9]*,padi-limit=1000
 
 [l2tp]
 verbose=1
@@ -171,6 +173,7 @@ attr=Framed-Pool
 log-file=/var/log/accel-ppp/accel-ppp.log
 log-emerg=/var/log/accel-ppp/emerg.log
 log-fail-file=/var/log/accel-ppp/auth-fail.log
+log-debug=/var/log/accel-ppp/debug.log
 #log-debug=/dev/stdout
 #syslog=accel-pppd,daemon
 #log-tcp=127.0.0.1:3000
