@@ -23,7 +23,7 @@ pppd_compat
 #chap-secrets
 #net-snmp
 #logwtmp
-#connlimit
+connlimit
 
 #ipv6_nd
 #ipv6_dhcp
@@ -83,7 +83,8 @@ service-name=carbonxge
 
 [l2tp]
 verbose=1
-dictionary=/usr/local/share/accel-ppp/l2tp/dictionary
+#dictionary=/usr/local/share/accel-ppp/l2tp/dictionary
+dictionary=/etc/accel-ppp/l2tp/dictionary
 #hello-interval=60
 #timeout=60
 #rtimeout=5
@@ -94,6 +95,8 @@ dictionary=/usr/local/share/accel-ppp/l2tp/dictionary
 #dataseq=allow
 #reorder-timeout=0
 #ip-pool=l2tp
+avp_permissive=1
+
 
 [ipoe]
 verbose=1
@@ -137,6 +140,7 @@ interface=eth0
 
 [radius]
 #dictionary=/usr/local/share/accel-ppp/radius/dictionary
+dictionary=/etc/accel-ppp/radius/dictionary
 nas-identifier=@@@nas_identifier%%%
 nas-ip-address=@@@nas_identifier%%%
 gw-ip-address=@@@ppp_server_ip%%%
@@ -227,8 +231,8 @@ agent-name=accel-ppp
 
 [connlimit]
 limit=10/min
-burst=3
-timeout=60
+burst=10
+timeout=600
 
 [ipv6-pool]
 fc00:0:1::/48,64
