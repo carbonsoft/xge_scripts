@@ -104,7 +104,9 @@ gen_accel_pppd_config() {
 	interface="$(get_pppoe_interfaces)"
 
 	for ip in ${app['ppp-server.ip']}/32 $nas_identifier/8; do
-		ip addr add $ip dev dummy0
+		if ! ip -4 a | egrep -q " ${ip%/*}/[0-9][0-9]*"; then
+			ip addr add $ip dev dummy0
+		fi
 	done &>/dev/null
 
 	[ "${vpn['pptp.enabled']}" = '1' ] && pptp_string=pptp
