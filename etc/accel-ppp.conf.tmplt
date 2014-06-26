@@ -133,6 +133,7 @@ interface=eth0
 
 
 [dns]
+@@@ppp_server_ip%%%
 #dns1=172.16.0.1
 #dns2=172.16.1.1
 dns1=@@@ppp_server_ip%%%
