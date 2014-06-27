@@ -81,7 +81,7 @@ verbose=1
 #interface=eth1,padi-limit=1000
 ac-name=@@@hostname%%%
 service-name=@@@hostname%%%
-interface=re:L?[a-z0-9]*,padi-limit=1000
+interface=@@@interface%%%
 
 [l2tp]
 verbose=1
@@ -136,6 +136,8 @@ interface=eth0
 @@@ppp_server_ip%%%
 #dns1=172.16.0.1
 #dns2=172.16.1.1
+dns1=@@@ppp_server_ip%%%
+dns2=8.8.8.8
 
 [wins]
 #wins1=172.16.0.1
