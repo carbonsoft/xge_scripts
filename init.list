@@ -6,3 +6,7 @@ accel-pppd
 nfusens
 ipoed
 named
+zebra
+ospfd
+bgpd
+ripd
