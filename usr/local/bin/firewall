@@ -150,6 +150,9 @@ xge_filter() {
 		done
 	fi
 
+	# quagga
+	iptables -t filter -A xge_in_accept -p 89 -j ACCEPT
+	iptables -t filter -A xge_in_accept -p tcp -m multiport --dport 2600,2601,2604 -j ACCEPT
 	iptables -t filter -I INPUT -j xge_in_accept
 }
 
