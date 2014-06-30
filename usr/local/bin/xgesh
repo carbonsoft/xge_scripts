@@ -224,10 +224,10 @@ policy() {
 	shift
 	case $policy_cmd in
 	set | remove )
-		__policy_$policy_cmd $@
+		__policy_$policy_cmd ${@//null/0}
 		;;
 	* )
-		echo "bad subcommand: $policy_cmd $@"
+		echo "bad subcommand: $policy_cmd ${@//null/0}"
 		return 1
 		;;
 	esac
