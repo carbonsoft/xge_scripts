@@ -127,6 +127,10 @@ xge_filter() {
 	iptables -t filter -A xge_in_accept -p tcp --dport 1723 -j xge_lan_accept
 	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
 
+        # l2tp
+        iptables -t filter -A xge_in_accept -p udp --dport 1701 -j xge_lan_accept
+
+
 	# dns
 	iptables -t filter -A xge_in_accept -p udp --dport 53 -j ACCEPT
 
