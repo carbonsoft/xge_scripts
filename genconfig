@@ -3,6 +3,9 @@
 if [ "$1" = "nochroot" ]; then
 	rm -f /app/xge/etc/sysconfig/network-scripts/*
 	cp -a /etc/sysconfig/network-scripts/* /app/xge/etc/sysconfig/network-scripts/
+	l2tp_ko=/lib/modules/$(uname -r)/kernel/drivers/net/pppol2tp.ko
+	mkdir -p /app/xge/${l2tp_ko%/*}
+	[ -f $l2tp_ko ] && cp -uva $l2tp_ko /app/xge/$l2tp_ko
 	exit 0
 fi
 
