@@ -81,7 +81,7 @@ verbose=1
 #interface=eth1,padi-limit=1000
 ac-name=@@@hostname%%%
 service-name=@@@hostname%%%
-interface=@@@interface%%%
+@@@interface%%%
 
 [l2tp]
 verbose=1
