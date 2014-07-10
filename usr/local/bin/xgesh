@@ -108,11 +108,15 @@ __session_list() {
 	ls /var/lib/xge_sessions/
 }
 
+__session_dump() {
+	cat /var/lib/xge_sessions/*
+}
+
 session() {
 	session_cmd="$1"
 	shift
 	case "$session_cmd" in
-	info | disconnect | start | stop | test | remove | list )
+	info | dump | disconnect | start | stop | test | remove | list )
 		__session_$session_cmd $@
 		;;
 	* )
@@ -546,6 +550,8 @@ help() {
 	echo '		    # sessions'
 	echo '			# list of all sessions'
 	echo '			    session list'
+	echo '			# dump of all sessions'
+	echo '			    session dump'
 	echo '			# fast info about session'
 	echo '			    session info <IP>'
 	echo '			# session diagnostic, getting info from iptables/ipset/tc/etc, slowly'
