@@ -93,7 +93,7 @@ radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-се�
 declare -A networks
 networks['widget']='menu "Списки подсетей"'
 networks['noblock']=''
-networks['noblock.widget']='iplist "Список подсетей доступных при отрицательном балансе"'
+networks['noblock.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
 
 declare -A ctl
 ctl['start']='/service start'
