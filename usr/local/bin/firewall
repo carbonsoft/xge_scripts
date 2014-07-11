@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Design notes:
+# 1. Все правила разбиты по функциям одноимённым с таблицей в которую добавляются
+# 2. Все правила стоит писать в одну строчку чтобы разработчики могли спокойно грепать их
+# 3. Стоит избегать использования переменных в правилах во славу удобного поиска и копирования-вставки для отладки руками
+
 export PATH=$PATH:/usr/local/bin/
 trap _exit EXIT
 
@@ -53,6 +58,7 @@ xge_nat() {
 	iptables -t nat -A xge_redirect_webauth -j $NAT_DROP
 
 	# links in xge_dnat
+	iptables -t nat -A xge_dnat -m set --set xge_noblock dst -j RETURN
 	iptables -t nat -A xge_dnat -m set ! --set xge_forward_allow src -j xge_redirect_noauth
 	iptables -t nat -A xge_dnat -m set --set xge_redirect src  -j xge_redirect
 	iptables -t nat -A xge_dnat -m set --set xge_redirect_webauth src -j xge_redirect_webauth
@@ -86,8 +92,17 @@ xge_ipset() {
 	ipset create xge_forward_deny hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_mangle_accept hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_nat_default hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_noblock hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_redirect hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_redirect_webauth hash:ip family inet hashsize 65536 maxelem 65536
+}
+
+# load ip from configs
+xge_ipset_load() {
+	ipset flush xge_noblock
+	for net in ${networks['noblock']}; do
+		ipset add xge_noblock $net
+	done
 }
 
 xge_filter() {
@@ -117,6 +132,8 @@ xge_filter() {
 	iptables -t filter -A xge_forward -m set --set xge_forward_allow dst -j xge_ULOGd
 	iptables -t filter -A xge_forward -m set --set xge_forward_allow src -j ACCEPT
 	iptables -t filter -A xge_forward -m set --set xge_forward_allow dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_noblock src -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_noblock dst -j ACCEPT
 
 	# принимает уже установленные соединения
 	iptables -t filter -A xge_forward -m state --state ESTABLISHED -j ACCEPT
@@ -239,6 +256,7 @@ start() {
 	xge_filter
 	xge_mangle
 	restore
+	xge_ipset_load
 	[ -x /usr/local/bin/firewall_hook ] && /usr/local/bin/firewall_hook || return 0
 }
 

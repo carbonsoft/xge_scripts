@@ -90,6 +90,11 @@ radclient['coa_server.port.widget']='inputbox "Порт COA-сервера" "П�
 radclient['nas_identifier']='169.1.18.12'
 radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-сервера" "Является идентификатором этого AS в настройках Radius-сервера биллинга"'
 
+declare -A networks
+networks['widget']='menu "Списки подсетей"'
+networks['noblock']=''
+networks['noblock.widget']='iplist "Список подсетей доступных при отрицательном балансе"'
+
 declare -A ctl
 ctl['start']='/service start'
 ctl['stop']='/service stop'
