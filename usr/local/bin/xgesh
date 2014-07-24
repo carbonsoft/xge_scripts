@@ -418,9 +418,9 @@ __ipset() {
 	if [ "$1" = 'add' ]; then
 		if ipset -q test $2 $3; then
 			echo " $3 already in $2 "
-			return 0
+		else
+			ipset $@ || return $?
 		fi
-		ipset $@ || return $?
 		lists="|${lists}|"; lists="${lists//|$2|/|}$2"; lists=${lists/||/|}; lists=${lists#|};
 		__session_update $3 lists ${lists//|/ }
 		return $?
@@ -429,9 +429,9 @@ __ipset() {
 	if [ "$1" = 'del' ]; then
 		if ! ipset -q test $2 $3; then
 			echo " $3 already isn't in $2 "
-			return 0
+		else
+			ipset $@ || return $?
 		fi
-		ipset $@ || return $?
 		lists="|${lists}|"; lists="${lists//|$2|/|}"; lists=${lists/||/|}; lists=${lists#|};
 		__session_update $3 lists ${lists//|/ }
 		return $?
