@@ -18,7 +18,7 @@ complete -F _xgesh_policy xgesh policy
 
 _xgesh_session() {
 	local cur=${COMP_WORDS[COMP_CWORD]}
-	COMPREPLY=( $(compgen -W "list info test" -- $cur) )
+	COMPREPLY=( $(compgen -W "list info test dump disconnect remove" -- $cur) )
 }
 complete -F _xgesh_session xgesh session
 
