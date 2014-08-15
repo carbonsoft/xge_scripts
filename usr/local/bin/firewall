@@ -59,7 +59,7 @@ xge_nat() {
 
 	# links in xge_dnat
 	iptables -t nat -A xge_dnat -m set --set xge_noblock dst -j RETURN
-	iptables -t nat -A xge_dnat -m set ! --set xge_forward_allow src -j xge_redirect_noauth
+	iptables -t nat -A xge_dnat -m set ! --set xge_forward_allow src -m set ! --set xge_forward_allow dst -j xge_redirect_noauth
 	iptables -t nat -A xge_dnat -m set --set xge_redirect src  -j xge_redirect
 	iptables -t nat -A xge_dnat -m set --set xge_redirect_webauth src -j xge_redirect_webauth
 
