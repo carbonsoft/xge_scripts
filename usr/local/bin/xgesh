@@ -3,27 +3,12 @@
 export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/:/usr/local/bin/"
 
 #set -eux
-#TODO: flock
 #TODO: transparent ipset
 #TODO: transparent iptables
 #TODO: transparent tc
 #TODO: transparent ip
-#TODO: ip username snat policy lists mac class_id to some list or variable or magic to avoid dupicity
-#TODO: trap EXIT _exit
 #TODO: rotate class id [ ! -f $FILE_CLASS_ID ] && class_id=2000
 # accel-cmd terminate ip 10.128.0.73
-
-# examples
-#ip xge_forward add 192.168.1.1
-#ip xge_snat add 192.168.1.1 2.2.2.2
-#ip xge_redirect add 192.168.1.1
-#ip mark88 add 192.168.1.1
-#filter create fw_999 src-list drop
-#filter create fw_999 src-list drop
-#nat create fw_999 src-list snat
-#nat create fw_999 src-list redirect
-#policy set 192.168.1.1 in 10000 20000 12000 out 10000 20000 12000
-# ip_access_list <ipset_command> <access_list_name> <accept|allow|deny|snat|dnat> <source> <destination> <ipset_name>
 
 __exit(){
 	REZ=$?
@@ -41,13 +26,15 @@ __try() {
 }
 
 TAB_FILE="/var/lib/nas_iptab_nat.dat"
-FILE_CLASS_ID=/var/lib/xge_class_id.tc
+FILE_CLASS_ID="/var/lib/xge_class_id.tc"
 session_dir="/var/lib/xge_sessions/"
 shapers_dir="/var/lib/xge_shapers"
 free_shapers_dir="$shapers_dir/free"
 lock_shapers_dir="$shapers_dir/lock"
 exec 20>/var/lock/xge_iptables.lock
 exec 21>/var/lock/xge_class_id_allocate.lock
+row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+session_fields="ip username snat policy lists mac class_id state type terminate_cause tmp"
 
 lists_prepare() {
 	for f in {2001..8998}; do
@@ -126,8 +113,6 @@ session() {
 	esac
 }
 
-session_fields="ip username snat policy lists mac class_id state type terminate_cause tmp"
-
 __session_update() {
 	session_id="$1"
 	shift
@@ -139,7 +124,6 @@ __session_update() {
 	val="${val//[-]/___}"
 	val="${val//[$_n|$_t| ]/|}"
 	[ "$val" = "" ] && val='-'
-	row="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	[ -s $session_dir/$session_id ] && read row < $session_dir/$session_id
 	read $session_fields <<< "$row"
 	ip=$session_id #hack
@@ -160,7 +144,7 @@ __session_disconnect() {
 	fi
 
 	if [ "$(__session_var_get $1 type)" = 'IPOE' ]; then
-		ip forward_allow del $1
+		ip accept_list del $1
 	fi
 }
 
@@ -514,48 +498,48 @@ help() {
 	echo '	       and  COMMANDS := {'
 	echo '		    # access'
 	echo '		    	# allow forward traffic (give access:)'
-	echo '			    xgesh ip forward_allow add <xgesh IP>'
-	echo '			    xgesh ip forward_allow 1 <xgesh IP>'
+	echo '			    xgesh ip accept_list add <abonent ip>'
+	echo '			    xgesh ip accept_list 1 <abonent ip>'
 	echo '		    	# remove forward traffic (give access:)'
-	echo '			    xgesh ip forward_allow del <xgesh IP>'
-	echo '			    xgesh ip forward_allow 0 <xgesh IP>'
+	echo '			    xgesh ip accept_list del <abonent ip>'
+	echo '			    xgesh ip accept_list 0 <abonent ip>'
 	echo '		    # nat'
 	echo '		    	# add snat address to user:'
-	echo '			    xgesh ip snat add <xgesh IP> <SNAT_xgesh IP>'
-	echo '			    xgesh ip snat 0 <xgesh IP> <SNAT_xgesh IP>'
+	echo '			    xgesh ip snat add <abonent ip> <abonent snat ip>'
+	echo '			    xgesh ip snat 0 <abonent ip> <abonent snat ip>'
 	echo '		    	# remove snat address from user:'
-	echo '			    xgesh ip snat del <xgesh IP>'
-	echo '			    xgesh ip snat add <xgesh IP> 0.0.0.0'
-	echo '			    xgesh ip snat 0 <xgesh IP>'
-	echo '			    xgesh ip snat 1 <xgesh IP> 0.0.0.0'
+	echo '			    xgesh ip snat del <abonent ip>'
+	echo '			    xgesh ip snat add <abonent ip> 0.0.0.0'
+	echo '			    xgesh ip snat 0 <abonent ip>'
+	echo '			    xgesh ip snat 1 <abonent ip> 0.0.0.0'
 	echo '		    # mac'
 	echo '		    	# set mac binding:'
-	echo '			    xgesh mac set <IP> <MAC>'
+	echo '			    xgesh mac set <abonent ip> <MAC>'
 	echo '		    	# set mac binding:'
-	echo '			    xgesh mac remove <IP>'
+	echo '			    xgesh mac remove <abonent ip>'
 	echo '		    # shapers'
 	echo '		    	# set shaper:'
-	echo '			    xgesh policy set <IP> in <RATE_IN> <CEIL_IN> <BURST_IN> out <RATE_OUT> <CEIL_OUT> <BURST_OUT>'
-	echo '			    xgesh policy set <IP> in <RATE_IN> <CEIL_IN> out <RATE_OUT> <CEIL_OUT>'
-	echo '			    xgesh policy set <IP> in <RATE_IN> out <RATE_OUT>'
+	echo '			    xgesh policy set <abonent ip> in <RATE_IN> <CEIL_IN> <BURST_IN> out <RATE_OUT> <CEIL_OUT> <BURST_OUT>'
+	echo '			    xgesh policy set <abonent ip> in <RATE_IN> <CEIL_IN> out <RATE_OUT> <CEIL_OUT>'
+	echo '			    xgesh policy set <abonent ip> in <RATE_IN> out <RATE_OUT>'
 	echo '		    	# remove forward traffic (give access:)'
-	echo '			    xgesh policy remove <IP>'
+	echo '			    xgesh policy remove <abonent ip>'
 	echo '		    # redirects'
 	echo '			# add redirect to negative balance page'
-	echo '			    xgesh ip redirect add <IP>'
-	echo '			    xgesh ip redirect 1 <IP>'
+	echo '			    xgesh ip negbal_list add <abonent ip>'
+	echo '			    xgesh ip negbal_list 1 <abonent ip>'
 	echo '			# remove redirect to negative balance page'
-	echo '			    xgesh ip redirect del <IP>'
-	echo '			    xgesh ip redirect 0 <IP>'
+	echo '			    xgesh ip negbal_list del <abonent ip>'
+	echo '			    xgesh ip negbal_list 0 <abonent ip>'
 	echo '		    # sessions'
 	echo '			# list of all sessions'
 	echo '			    xgesh session list'
 	echo '			# dump of all sessions'
 	echo '			    xgesh session dump'
 	echo '			# fast info about session'
-	echo '			    xgesh session info <IP>'
+	echo '			    xgesh session info <abonent ip>'
 	echo '			# session diagnostic, getting info from iptables/ipset/tc/etc, slowly'
-	echo '			    xgesh session test <IP>'
+	echo '			    xgesh session test <abonent ip>'
 }
 
 cmd() {
