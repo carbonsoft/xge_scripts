@@ -58,6 +58,8 @@ firewall['new_limit_l']='2000'
 firewall['new_limit_l.widget']='inputbox "Ограничить колво новых соед/сек из лок.сети" "Рекомендуется 500-1000"'
 firewall['new_limit_e']='2000'
 firewall['new_limit_e.widget']='inputbox "Ограничить колво новых соед/сек из Интернет" "Рекомендуется 500-1000"'
+firewall['billing_ip']='169.1.0.80'
+firewall['billing_ip.widget']='inpubox "IP адрес для перенаправления" "Обычно IP биллинга"'
 
 declare -A remote_management
 remote_management['widget']='menu "Настройки управления маршрутизатором" "Пароль задаётся в настройках Radius"'
