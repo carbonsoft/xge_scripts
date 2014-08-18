@@ -339,8 +339,8 @@ __shaper_add() {
 	local retval=0
 	__try tc filter replace dev imq0 parent 1: protocol ip prio 1 handle $mark fw classid 1:$class_id
 	__try tc filter replace dev imq1 parent 1: protocol ip prio 1 handle $mark fw classid 1:$class_id
-	__try tc class replace dev imq0 parent 1:1 classid 1:$class_id htb rate ${rate_out}kbit ceil ${ceil_out}kbit prio 2 quantum $quantum_out
-	__try tc class replace dev imq1 parent 1:1 classid 1:$class_id htb rate ${rate_in}kbit  ceil ${ceil_in}kbit  prio 2 quantum $quantum_in
+	__try tc class replace dev imq0 parent 1:100 classid 1:$class_id htb rate ${rate_out}kbit ceil ${ceil_out}kbit prio 2 quantum $quantum_out
+	__try tc class replace dev imq1 parent 1:100 classid 1:$class_id htb rate ${rate_in}kbit  ceil ${ceil_in}kbit  prio 2 quantum $quantum_in
 	__try tc qdisc replace dev imq0 parent 1:$class_id handle $class_id: pfifo
 	__try tc qdisc replace dev imq1 parent 1:$class_id handle $class_id: pfifo
 	if [ "$retval" -gt '0' ]; then
