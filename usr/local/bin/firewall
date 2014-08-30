@@ -26,57 +26,25 @@ shaper=/usr/local/bin/shaper.sh
 
 ip_regex='([0-9]{1,3}\.){3}[0-9]{1,3}'
 
+#TODO: обратно iptables -t nat -A xge_redirect_noauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_noauth_ip']}:80
+#TODO: iptables -t nat -A xge_redirect_webauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_webauth_ip']}:80
 xge_nat() {
-	NAT_DROP=" DNAT --to-dest 169.169.169.169"
-	local local_ip="$(network_parser first_local_ip)"
+	iptables -t nat -N xge_dnat
 	iptables -t nat -N xge_postrouting
 	iptables -t nat -N xge_user2snat
-	iptables -t nat -A xge_postrouting -j xge_user2snat
 
 	# dnat
-	iptables -t nat -N xge_dnat
-	iptables -t nat -N xge_redirect
-	iptables -t nat -N xge_redirect_noauth
-	iptables -t nat -N xge_redirect_webauth
 
-	# redirect
-	iptables -t nat -A xge_redirect -m addrtype --dst-type LOCAL -j RETURN
-	iptables -t nat -A xge_redirect -p udp --dport 53 -j RETURN
-	iptables -t nat -A xge_redirect -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_ip']}:80
-	iptables -t nat -A xge_redirect -j $NAT_DROP
-
-	# noauth
-	iptables -t nat -A xge_redirect_noauth -m addrtype --dst-type LOCAL -j RETURN
-	iptables -t nat -A xge_redirect_noauth -p udp --dport 53 -j DNAT --to-dest $local_ip:53
-	iptables -t nat -A xge_redirect_noauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_noauth_ip']}:80
-	iptables -t nat -A xge_redirect_noauth -j $NAT_DROP
-
-	# webauth
-	iptables -t nat -A xge_redirect_webauth -m addrtype --dst-type LOCAL -j RETURN
-	iptables -t nat -A xge_redirect_webauth -p udp --dport 53 -j RETURN
-	iptables -t nat -A xge_redirect_webauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_webauth_ip']}:80
-	iptables -t nat -A xge_redirect_webauth -j $NAT_DROP
-
-	# links in xge_dnat
-	iptables -t nat -A xge_dnat -m set --set xge_noblock dst -j RETURN
-	iptables -t nat -A xge_dnat -m set ! --set xge_forward_allow src -m set ! --set xge_forward_allow dst -j xge_redirect_noauth
-	iptables -t nat -A xge_dnat -m set --set xge_redirect src  -j xge_redirect
-	iptables -t nat -A xge_dnat -m set --set xge_redirect_webauth src -j xge_redirect_webauth
-
-	# default snat for private network
-	iptables -t nat -N xge_default_snat
-	iptables -t nat -A xge_default_snat -m addrtype ! --dst-type LOCAL -s 10.0.0.0/8 -j MASQUERADE
-	iptables -t nat -A xge_default_snat -m addrtype ! --dst-type LOCAL -s 172.16.0.0/12 -j MASQUERADE
-	iptables -t nat -A xge_default_snat -m addrtype ! --dst-type LOCAL -s 192.168.0.0/16 -j MASQUERADE
-
-	if [ "${app['default_snat_enabled']}" = '1' ]; then
-		iptables -t nat -A xge_postrouting -j xge_default_snat
+	iptables -t nat -A xge_dnat -s "${firewall['billing_ip']}" -j ACCEPT
+	iptables -t nat -A xge_dnat -d "${firewall['billing_ip']}" -j ACCEPT
+	if [ -n "${httpd['redirect_noauth_ip']}" ]; then
+		iptables -t nat -A xge_dnat -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_accept_list src -m set ! --set xge_accept_list dst -j DNAT --to-dest "${httpd['redirect_noauth_ip']}"
+	else
+		iptables -t nat -A xge_dnat -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_accept_list src -m set ! --set xge_accept_list dst -j DNAT --to-dest ${firewall['billing_ip']}:444
 	fi
+	iptables -t nat -A xge_dnat -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_negbal_list src -m set ! --set xge_trusted_list dst -j DNAT --to-dest ${firewall['billing_ip']}:442
 
-	# final link
-	iptables -t nat -A PREROUTING -j xge_dnat
-	iptables -t nat -A POSTROUTING -j xge_postrouting
-
+	# snat
 	iptables_file=/tmp/firewall/iptables_file.nat.$$
 	echo "#" > $iptables_file
 	make_tree nat user2snat user2snat s
@@ -84,24 +52,36 @@ xge_nat() {
 		cat $iptables_file
 		exit 1
 	fi
+
+	iptables -t nat -A xge_postrouting -j xge_user2snat
+	if [ "${app['default_snat_enabled']}" = '1' ]; then
+		iptables -t nat -A xge_postrouting -m addrtype ! --dst-type LOCAL -m set --set xge_local_net src -m set ! --set xge_local_net dst -j MASQUERADE
+	fi
+
+	# final link
+	iptables -t nat -A PREROUTING -j xge_dnat
+	iptables -t nat -A POSTROUTING -j xge_postrouting
+
 }
 
 # стандартные ipset'ы разрешить/запретить инет
 xge_ipset() {
-	ipset create xge_forward_allow hash:ip family inet hashsize 65536 maxelem 65536
-	ipset create xge_forward_deny hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_accept_list hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_trusted_list hash:net family inet hashsize 65536 maxelem 65536
+	ipset create xge_negbal_list hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_local_net hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_mangle_accept hash:ip family inet hashsize 65536 maxelem 65536
-	ipset create xge_nat_default hash:ip family inet hashsize 65536 maxelem 65536
-	ipset create xge_noblock hash:net family inet hashsize 65536 maxelem 65536
-	ipset create xge_redirect hash:ip family inet hashsize 65536 maxelem 65536
-	ipset create xge_redirect_webauth hash:ip family inet hashsize 65536 maxelem 65536
 }
 
 # load ip from configs
 xge_ipset_load() {
-	ipset flush xge_noblock
+	ipset flush xge_trusted_list
 	for net in ${networks['noblock']}; do
-		ipset add xge_noblock $net
+		ipset add xge_trusted_list $net
+	done
+	ipset flush xge_local_net
+	for net in 192.168.0.0/16 172.16.0.0/12 10.0.0.0/8; do
+		ipset add xge_local_net $net
 	done
 }
 
@@ -128,12 +108,12 @@ xge_filter() {
 	iptables -t filter -N xge_ULOGd
 	iptables -t filter -A xge_ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
 	iptables -t filter -A xge_forward -d 169.169.169.169 -j REJECT --reject-with icmp-admin-prohibited
-	iptables -t filter -A xge_forward -m set --set xge_forward_allow src -j xge_ULOGd
-	iptables -t filter -A xge_forward -m set --set xge_forward_allow dst -j xge_ULOGd
-	iptables -t filter -A xge_forward -m set --set xge_forward_allow src -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_forward_allow dst -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_noblock src -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_noblock dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_accept_list src -j xge_ULOGd
+	iptables -t filter -A xge_forward -m set --set xge_accept_list dst -j xge_ULOGd
+	iptables -t filter -A xge_forward -m set --set xge_accept_list src -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_accept_list dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trusted_list src -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trusted_list dst -j ACCEPT
 
 	# принимает уже установленные соединения
 	iptables -t filter -A xge_forward -m state --state ESTABLISHED -j ACCEPT
@@ -184,8 +164,8 @@ create_connlimit() {
 		iptables -t mangle -F xge_new_limit_l_tcp
 		iptables -t mangle -N xge_new_limit_l_udp
 		iptables -t mangle -F xge_new_limit_l_udp
-		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_l_tcp
-		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_l_udp
+		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_l_tcp
+		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_l_udp
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 5190 -j RETURN
 
@@ -209,8 +189,8 @@ create_connlimit() {
 		iptables -t mangle -F xge_new_limit_e_tcp
 		iptables -t mangle -N xge_new_limit_e_udp
 		iptables -t mangle -F xge_new_limit_e_udp
-		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_e_tcp
-		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_forward_allow src -j xge_new_limit_e_udp
+		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_e_tcp
+		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_e_udp
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 5190 -j RETURN
 
