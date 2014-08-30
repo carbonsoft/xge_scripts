@@ -40,16 +40,21 @@ vpn['auth.mschap2.widget']='checkbox "Включить MS-CHAP v2" ""'
 declare -A httpd
 httpd['internal_ip']='169.0.80.90'
 httpd['internal_page']='http://169.0.80.90/index.html'
-httpd['internal_page.widget']='inputbox "Главная страница внутреннего веб-сервера XGE" ""'
+# httpd['internal_page.widget']='inputbox "Главная страница внутреннего веб-сервера XGE" ""'
 httpd['redirect_ip']='169.0.80.91'
 httpd['redirect_page']='http://169.0.80.91/redirect.html'
-httpd['redirect_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+# httpd['redirect_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
 httpd['redirect_noauth_ip']='169.0.80.92'
 httpd['redirect_noauth_page']='http://169.0.80.92/noauth.php'
-httpd['redirect_noauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+# httpd['redirect_noauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
 httpd['redirect_webauth_ip']='169.0.80.93'
 httpd['redirect_webauth_page']='http://169.0.80.93/webauth.html'
-httpd['redirect_webauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+# httpd['redirect_webauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+
+httpd['redirect_negbal_url']='http://169.1.0.80/html/negbal.html'
+httpd['redirect_negbal_url.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+httpd['redirect_blocked_url']='http://169.1.0.80/html/blocked.html'
+httpd['redirect_blocked_url.widget']='inputbox "Страница редиректа заблокированных и не авторизованных абонентов" ""'
 
 declare -A firewall
 firewall['enabled']='1'
@@ -94,8 +99,12 @@ radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-се�
 
 declare -A networks
 networks['widget']='menu "Списки подсетей"'
-networks['noblock']=''
-networks['noblock.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
+networks['trusted_list']=''
+networks['trusted_list.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
+networks['local_net']='192.168.0.0/16 172.16.0.0/12 10.0.0.0/8'
+networks['local_net.widget']='inputbox "Список локальных сетей, которые доступны без ната" "Задавать через пробел"'
+networks['allow_list']=''
+networks['allow_list.widget']='inputbox "Список подсетей доступных всегда и всем, в т.ч. не авторизованным и заблокированным" "Задавать через пробел"'
 
 declare -A ctl
 ctl['start']='/service start'

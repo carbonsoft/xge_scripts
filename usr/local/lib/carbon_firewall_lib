@@ -16,11 +16,11 @@ make_tree() {
 		tmp=${tmp//-t mangle/}
 		tmp=${tmp//-t filter/}
 		tmp=${tmp//-t nat/}
-		echo $tmp >> $iptables_file
+		echo $tmp 
 	}
 
 	#подготовим правила для iptables-restore
-	echo "*$TABLE" >>  $iptables_file
+	echo "*$TABLE"
 
 	depth=4
 	levels=2 # not used now
@@ -40,7 +40,7 @@ make_tree() {
 		done
 		# echo -n .
 	done
-	echo "COMMIT" >> $iptables_file
+	echo "COMMIT"
 	# обязательно unset, иначе дальше будет плохо и будет вызываться эта функция, а не /sbin/iptables
 	unset iptables
 	# echo "всего цепочек + столько же правил $((2**depth*(2**(depth*levels)-1)/(2**depth-1)))"
