@@ -118,7 +118,7 @@ ipset_restore() {
 	while read t list t; do
 		# ipset destroy $list &>/dev/null && continue
 		ipset destroy $list 2>/tmp/firewall/ipset_destroy.out.$$ && continue
-		fgrep 'does not exist'  /tmp/firewall/ipset_destroy.out.$$ && continue
+		fgrep -q 'does not exist'  /tmp/firewall/ipset_destroy.out.$$ && continue
 		ipset flush $list &>/dev/null
 		grep -v "^create $list" /tmp/firewall/ipset.tmp.$$ > /tmp/firewall/ipset2.tmp.$$
 		mv -f /tmp/firewall/ipset2.tmp.$$ /tmp/firewall/ipset.tmp.$$

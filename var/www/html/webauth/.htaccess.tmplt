@@ -1,1 +1,0 @@
-RedirectMatch 302 (.*)/(?!webauth.php)(.*) /webauth.php?url=$2

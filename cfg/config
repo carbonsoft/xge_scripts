@@ -51,10 +51,12 @@ httpd['redirect_webauth_ip']='169.0.80.93'
 httpd['redirect_webauth_page']='http://169.0.80.93/webauth.html'
 # httpd['redirect_webauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
 
-httpd['redirect_negbal_url']='http://169.1.0.80/html/negbal.html'
+httpd['redirect_negbal_url']='http://169.1.0.80/html/negbal.php'
 httpd['redirect_negbal_url.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
-httpd['redirect_blocked_url']='http://169.1.0.80/html/blocked.html'
+httpd['redirect_blocked_url']='http://169.1.0.80/html/blocked.php'
 httpd['redirect_blocked_url.widget']='inputbox "Страница редиректа заблокированных и не авторизованных абонентов" ""'
+httpd['redirect_noauth_url']='http://169.1.0.80/html/noauth.php'
+httpd['redirect_noauth_url.widget']='inputbox "Страница редиректа не авторизованных абонентов" ""'
 
 declare -A firewall
 firewall['enabled']='1'

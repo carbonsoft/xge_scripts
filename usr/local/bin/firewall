@@ -37,9 +37,16 @@ xge_nat() {
 
 	iptables -t nat -A xge_pre -s "${firewall['billing_ip']}" -j ACCEPT
 	iptables -t nat -A xge_pre -d "${firewall['billing_ip']}" -j ACCEPT
-	
-	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_accept_list src -m set ! --set xge_accept_list dst -j DNAT --to-dest "${httpd['internal_ip']}":444
-	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_negbal_list src -m set ! --set xge_trusted_list dst -j DNAT --to-dest "${httpd['internal_ip']}":442
+
+	# noauth
+	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_auth_list src -j DNAT --to-dest "${httpd['internal_ip']}":440
+
+	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_trust_blocked_list dst -j ACCEPT
+	# blocked
+	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_blocked_list src -j DNAT --to-dest "${httpd['internal_ip']}":444
+
+	# negbal
+	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_negbal_list src -m set ! --set xge_trust_negbal_list dst -j DNAT --to-dest "${httpd['internal_ip']}":442
 
 	# snat
 	iptables_file=/tmp/firewall/iptables_file.nat.$$
@@ -58,36 +65,36 @@ xge_nat() {
 	# final link
 	iptables -t nat -A PREROUTING -j xge_pre
 	iptables -t nat -A POSTROUTING -j xge_post
-
 }
 
 # стандартные ipset'ы разрешить/запретить инет
 xge_ipset() {
-	ipset create xge_accept_list hash:ip family inet hashsize 65536 maxelem 65536
-	ipset create xge_trusted_list hash:net family inet hashsize 65536 maxelem 65536
+	ipset create xge_auth_list hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_negbal_list hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_blocked_list hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_local_net hash:net family inet hashsize 65536 maxelem 65536
-	ipset create xge_allow_list hash:net family inet hashsize 65536 maxelem 65536
+	ipset create xge_trust_blocked_list hash:net family inet hashsize 65536 maxelem 65536
+	ipset create xge_trust_negbal_list hash:net family inet hashsize 65536 maxelem 65536
 	#ipset create xge_mangle_accept hash:ip family inet hashsize 65536 maxelem 65536
 }
 
 # load ip from configs
 xge_ipset_load() {
-	ipset flush xge_trusted_list
+	ipset flush xge_trust_blocked_list
+	for net in ${networks['trust_blocked_list']}; do
+		ipset add xge_trust_blocked_list $net
+	done
+
+	ipset flush xge_trust_negbal_list
 	#При использовании без 5биллинга
-	for net in ${networks['trusted_list']}; do
-		ipset add xge_trusted_list $net
+	for net in ${networks['trust_negbal_list']}; do
+		ipset add xge_trust_negbal_list $net
 	done
 
 	ipset flush xge_local_net
 	[ -z "${networks['local_net']:-}" ] && networks['local_net']="192.168.0.0/16 172.16.0.0/12 10.0.0.0/8"
 	for net in ${networks['local_net']}; do
 		ipset add xge_local_net $net
-	done
-
-	ipset flush xge_allow_list
-	for net in ${networks['allow_list']}; do
-		ipset add xge_allow_list $net
 	done
 }
 
@@ -114,8 +121,8 @@ xge_filter() {
 	iptables -t filter -N xge_ULOGd
 	iptables -t filter -A xge_ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
 	# iptables -t filter -A xge_forward -d 169.169.169.169 -j REJECT --reject-with icmp-admin-prohibited
-	# iptables -t filter -A xge_forward -m set --set xge_accept_list src -j xge_ULOGd
-	# iptables -t filter -A xge_forward -m set --set xge_accept_list dst -j xge_ULOGd
+	# iptables -t filter -A xge_forward -m set --set xge_auth_list src -j xge_ULOGd
+	# iptables -t filter -A xge_forward -m set --set xge_auth_list dst -j xge_ULOGd
 	iptables -t filter -A xge_forward -j xge_ULOGd
 	# оптимизация бэкпорт из 4 iptables -t filter -A xge_forward -m conmark2=1 -m каждый не тысячный пакет -m не реже раз в 5 мин -m state --state ESTABLISHED -j ACCEPT
 	iptables -t filter -A xge_forward -d ${firewall['billing_ip']} -j ACCEPT
@@ -123,12 +130,21 @@ xge_filter() {
 	iptables -t filter -A xge_forward -p udp --dport 53 -j ACCEPT
 	iptables -t filter -A xge_forward -p udp --sport 53 -m state --state ESTABLISHED -j ACCEPT
 
-	iptables -t filter -A xge_forward -m set --set xge_allow_list src -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_allow_list dst -j ACCEPT
-	# Все, что не accept_list дропаем
-	iptables -t filter -A xge_forward -m set ! --set xge_accept_list src -m set ! --set xge_accept_list dst -j DROP
-	iptables -t filter -A xge_forward -m set --set xge_trusted_list src -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_trusted_list dst -j ACCEPT
+	# Все, что не auth_list дропаем
+	iptables -t filter -A xge_forward -m set ! --set xge_auth_list src -m set ! --set xge_auth_list dst -j DROP
+
+	iptables -t filter -A xge_forward -m set --set xge_trust_blocked_list dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trust_blocked_list src -j ACCEPT
+
+	# redirect_blocked drop
+	iptables -t filter -A xge_forward -m set --set xge_blocked_list dst -j DROP
+	iptables -t filter -A xge_forward -m set --set xge_blocked_list src -j DROP
+
+	iptables -t filter -A xge_forward -m set --set xge_trust_negbal_list src -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trust_negbal_list dst -j ACCEPT
+	# redirect_negbal drop
+	iptables -t filter -A xge_forward -m set --set xge_negbal_list dst -j DROP
+	iptables -t filter -A xge_forward -m set --set xge_negbal_list src -j DROP
 
 	# Сюда попадут только авторизованные
 	iptables -t filter -A xge_forward -j ACCEPT
@@ -136,33 +152,35 @@ xge_filter() {
 	####################################### INPUT ###########################
 	#
 	# pptp
-	iptables -t filter -N xge_in_accept
-	iptables -t filter -A xge_in_accept -p tcp --dport 1723 -j xge_lan_accept
-	iptables -t filter -A xge_in_accept -p 47 -j ACCEPT
+	iptables -t filter -N xge_input
+	iptables -t filter -A xge_input -m state --state ESTABLISHED -j ACCEPT
+	iptables -t filter -A xge_input -p tcp --dport 1723 -m set --set xge_local_net src -j ACCEPT
+	iptables -t filter -A xge_input -p 47 -m set --set xge_local_net src -j ACCEPT
 
     # l2tp
-    iptables -t filter -A xge_in_accept -p udp --dport 1701 -j xge_lan_accept
+    iptables -t filter -A xge_input -p udp --dport 1701 -m set --set xge_local_net src -j ACCEPT
 
 	# dns
-	iptables -t filter -A xge_in_accept -p udp --dport 53 -j ACCEPT
+	iptables -t filter -A xge_input -p udp --dport 53 -j ACCEPT
+	iptables -t filter -A xge_input -p tcp --dport 53 -j ACCEPT
 
 	# локальный вебсервер редиректов и авторизации
-	iptables -t filter -A xge_in_accept -d "${httpd['internal_ip']}" -j ACCEPT
+	iptables -t filter -A xge_input -d "${httpd['internal_ip']}" -j ACCEPT
 	# auth
-	# [ -n "${httpd['redirect_ip']}" ] && iptables -t filter -A xge_in_accept -d ${httpd['redirect_ip']} -j ACCEPT
-	# [ -n "${httpd['redirect_noauth_ip']}" ] && iptables -t filter -A xge_in_accept -d ${httpd['redirect_noauth_ip']} -j ACCEPT
-	# [ -n "${httpd['redirect_webauth_ip']}" ] && iptables -t filter -A xge_in_accept -d ${httpd['redirect_webauth_ip']} -j ACCEPT
+	# [ -n "${httpd['redirect_ip']}" ] && iptables -t filter -A xge_input -d ${httpd['redirect_ip']} -j ACCEPT
+	# [ -n "${httpd['redirect_noauth_ip']}" ] && iptables -t filter -A xge_input -d ${httpd['redirect_noauth_ip']} -j ACCEPT
+	# [ -n "${httpd['redirect_webauth_ip']}" ] && iptables -t filter -A xge_input -d ${httpd['redirect_webauth_ip']} -j ACCEPT
 
 	# radius coa, TODO fix range
 	if [ -n "${radclient['coa_client.ip']}" -a -n "${radclient['coa_server.port']}" ]; then
-		iptables -t filter -A xge_in_accept -s "${radclient['coa_client.ip']}" -p udp --dport "${radclient['coa_server.port']}" -j ACCEPT
+		iptables -t filter -A xge_input -s "${radclient['coa_client.ip']}" -p udp --dport "${radclient['coa_server.port']}" -j ACCEPT
 		# in billing_softrouter we have routing issue, if we have 169.1.37.99 on dummy
 		# we gonna connect to it with same src - 169.1.37.99
 		# so accept nas_identifier ip so as src, so as dst
 		# for sys_app in $(get_app_list); do
 		# 	if [ "$sys_app" = 'asr_billing' ]; then
-		iptables -t filter -A xge_in_accept -i lo -d "${radclient['nas_identifier']}" -p udp --sport "${radclient['coa_server.port']}" -j ACCEPT
-		iptables -t filter -A xge_in_accept -i lo -s "${radclient['nas_identifier']}" -p udp --dport "${radclient['coa_server.port']}" -j ACCEPT
+		iptables -t filter -A xge_input -i lo -d "${radclient['nas_identifier']}" -p udp --sport "${radclient['coa_server.port']}" -j ACCEPT
+		iptables -t filter -A xge_input -i lo -s "${radclient['nas_identifier']}" -p udp --dport "${radclient['coa_server.port']}" -j ACCEPT
 		# 		break
 		# 	fi
 		# done
@@ -170,25 +188,30 @@ xge_filter() {
 
 
 	# BGP
-	iptables -t filter -A xge_in_accept -p tcp --dport 179 -j ACCEPT
-	iptables -t filter -A xge_in_accept -p tcp --sport 179 -m state --state ESTABLISHED -j ACCEPT
+	iptables -t filter -A xge_input -p tcp --dport 179 -j ACCEPT
+	iptables -t filter -A xge_input -p tcp --sport 179 -m state --state ESTABLISHED -j ACCEPT
 
-	iptables -t filter -A xge_in_accept -p udp --dport 179 -j ACCEPT
-	iptables -t filter -A xge_in_accept -p udp --sport 179 -m state --state ESTABLISHED -j ACCEPT
+	iptables -t filter -A xge_input -p udp --dport 179 -j ACCEPT
+	iptables -t filter -A xge_input -p udp --sport 179 -m state --state ESTABLISHED -j ACCEPT
 
 	# OSPF
-	iptables -t filter -A xge_in_accept -p 89 -j ACCEPT
+	iptables -t filter -A xge_input -p 89 -j ACCEPT
 
 	# RIP
-	iptables -t filter -A xge_in_accept -p udp --dport 520:521 -j ACCEPT
-	iptables -t filter -A xge_in_accept -p udp --sport 520:521 -m state --state ESTABLISHED -j ACCEPT
+	iptables -t filter -A xge_input -p udp --dport 520:521 -j ACCEPT
+	iptables -t filter -A xge_input -p udp --sport 520:521 -m state --state ESTABLISHED -j ACCEPT
 	# Баг старой зебры в новой не подтвержден iptables -t nat -A POSTROUTING -p udp --dport 520 -j SNAT --to-source :520
 	iptables -t mangle -I PREROUTING -d 224.0.0.9/32 -p udp --dport 520 -m addrtype --dst-type LOCAL -j ACCEPT
 
 
 	# quagga telnet
-	iptables -t filter -A xge_in_accept -p tcp --dport 2600:2605 -j ACCEPT
-	iptables -t filter -I INPUT -j xge_in_accept
+	iptables -t filter -A xge_input -p tcp --dport 2600:2605 -j ACCEPT
+	iptables -t filter -I INPUT -j xge_input
+
+	####################################### OUTPUT ###########################
+	#
+	iptables -t filter -N xge_output
+	iptables -t filter -I OUTPUT -j xge_output
 
 
 }
@@ -200,8 +223,8 @@ create_new_pkt_limit() {
 		iptables -t mangle -F xge_new_limit_l_tcp
 		iptables -t mangle -N xge_new_limit_l_udp
 		iptables -t mangle -F xge_new_limit_l_udp
-		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_l_tcp
-		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_l_udp
+		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_auth_list src -j xge_new_limit_l_tcp
+		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_auth_list src -j xge_new_limit_l_udp
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_l_tcp -p tcp  --dport 5190 -j RETURN
 
@@ -225,8 +248,8 @@ create_new_pkt_limit() {
 		iptables -t mangle -F xge_new_limit_e_tcp
 		iptables -t mangle -N xge_new_limit_e_udp
 		iptables -t mangle -F xge_new_limit_e_udp
-		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_e_tcp
-		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_accept_list src -j xge_new_limit_e_udp
+		iptables -t mangle -A xge_state_new -p tcp --dport  1024: -m set --set xge_auth_list src -j xge_new_limit_e_tcp
+		iptables -t mangle -A xge_state_new -p udp --dport  1024: -m set --set xge_auth_list src -j xge_new_limit_e_udp
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 1723 -j RETURN
 		iptables -t mangle -A xge_new_limit_e_tcp -p tcp  --dport 5190 -j RETURN
 
