@@ -16,11 +16,11 @@ make_tree() {
 		tmp=${tmp//-t mangle/}
 		tmp=${tmp//-t filter/}
 		tmp=${tmp//-t nat/}
-		echo $tmp >> $iptables_file
+		echo $tmp 
 	}
 
 	#подготовим правила для iptables-restore
-	echo "*$TABLE" >>  $iptables_file
+	echo "*$TABLE"
 
 	depth=4
 	levels=2 # not used now
@@ -40,7 +40,7 @@ make_tree() {
 		done
 		# echo -n .
 	done
-	echo "COMMIT" >> $iptables_file
+	echo "COMMIT"
 	# обязательно unset, иначе дальше будет плохо и будет вызываться эта функция, а не /sbin/iptables
 	unset iptables
 	# echo "всего цепочек + столько же правил $((2**depth*(2**(depth*levels)-1)/(2**depth-1)))"
@@ -118,7 +118,7 @@ ipset_restore() {
 	while read t list t; do
 		# ipset destroy $list &>/dev/null && continue
 		ipset destroy $list 2>/tmp/firewall/ipset_destroy.out.$$ && continue
-		fgrep 'does not exist'  /tmp/firewall/ipset_destroy.out.$$ && continue
+		fgrep -q 'does not exist'  /tmp/firewall/ipset_destroy.out.$$ && continue
 		ipset flush $list &>/dev/null
 		grep -v "^create $list" /tmp/firewall/ipset.tmp.$$ > /tmp/firewall/ipset2.tmp.$$
 		mv -f /tmp/firewall/ipset2.tmp.$$ /tmp/firewall/ipset.tmp.$$

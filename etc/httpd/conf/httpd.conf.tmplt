@@ -1,97 +1,13 @@
-#
-# This is the main Apache server configuration file.  It contains the
-# configuration directives that give the server its instructions.
-# See <URL:http://httpd.apache.org/docs/2.2/> for detailed information.
-# In particular, see
-# <URL:http://httpd.apache.org/docs/2.2/mod/directives.html>
-# for a discussion of each configuration directive.
-#
-#
-# Do NOT simply read the instructions in here without understanding
-# what they do.  They're here only as hints or reminders.  If you are unsure
-# consult the online docs. You have been warned.
-#
-# The configuration directives are grouped into three basic sections:
-#  1. Directives that control the operation of the Apache server process as a
-#     whole (the 'global environment').
-#  2. Directives that define the parameters of the 'main' or 'default' server,
-#     which responds to requests that aren't handled by a virtual host.
-#     These directives also provide default values for the settings
-#     of all virtual hosts.
-#  3. Settings for virtual hosts, which allow Web requests to be sent to
-#     different IP addresses or hostnames and have them handled by the
-#     same Apache server process.
-#
-# Configuration and logfile names: If the filenames you specify for many
-# of the server's control files begin with "/" (or "drive:/" for Win32), the
-# server will use that explicit path.  If the filenames do *not* begin
-# with "/", the value of ServerRoot is prepended -- so "logs/foo.log"
-# with ServerRoot set to "/etc/httpd" will be interpreted by the
-# server as "/etc/httpd/logs/foo.log".
-#
-
-### Section 1: Global Environment
-#
-# The directives in this section affect the overall operation of Apache,
-# such as the number of concurrent requests it can handle or where it
-# can find its configuration files.
-#
-
-#
-# Don't give away too much information about all the subcomponents
-# we are running.  Comment out this line if you don't mind remote sites
-# finding out what major optional modules you are running
 ServerTokens OS
-
-#
-# ServerRoot: The top of the directory tree under which the server's
-# configuration, error, and log files are kept.
-#
-# NOTE!  If you intend to place this on an NFS (or otherwise network)
-# mounted filesystem then please read the LockFile documentation
-# (available at <URL:http://httpd.apache.org/docs/2.2/mod/mpm_common.html#lockfile>);
-# you will save yourself a lot of trouble.
-#
-# Do NOT add a slash at the end of the directory path.
-#
 ServerRoot "/etc/httpd"
-
-#
-# PidFile: The file in which the server should record its process
-# identification number when it starts.  Note the PIDFILE variable in
-# /etc/sysconfig/httpd must be set appropriately if this location is
-# changed.
-#
 PidFile run/httpd.pid
-
-#
-# Timeout: The number of seconds before receives and sends time out.
-#
-Timeout 60
-
-#
-# KeepAlive: Whether or not to allow persistent connections (more than
-# one request per connection). Set to "Off" to deactivate.
-#
-KeepAlive Off
-
-#
-# MaxKeepAliveRequests: The maximum number of requests to allow
-# during a persistent connection. Set to 0 to allow an unlimited amount.
-# We recommend you leave this number high, for maximum performance.
-#
+Timeout 20
+KeepAlive On
 MaxKeepAliveRequests 100
-
-#
-# KeepAliveTimeout: Number of seconds to wait for the next request from the
-# same client on the same connection.
-#
 KeepAliveTimeout 15
-
 ##
 ## Server-Pool Size Regulation (MPM specific)
 ##
-
 # prefork MPM
 # StartServers: number of server processes to start
 # MinSpareServers: minimum number of server processes which are kept spare
@@ -134,10 +50,10 @@ MaxRequestsPerChild  0
 #
 #Listen 12.34.56.78:80
 Listen @@@internal_httpd_ip_port%%%
-Listen @@@redirect_httpd_ip_port%%%
-Listen @@@noauth_httpd_ip_port%%%
-Listen @@@webauth_httpd_ip_port%%%
-
+Listen @@@negbal_ip_port%%%
+Listen @@@speedlimit_ip_port%%%
+Listen @@@noauth_ip_port%%%
+Listen @@@blocked_ip_port%%%
 #
 # Dynamic Shared Object (DSO) Support
 #
@@ -174,32 +90,32 @@ LoadModule mime_magic_module modules/mod_mime_magic.so
 LoadModule expires_module modules/mod_expires.so
 LoadModule deflate_module modules/mod_deflate.so
 LoadModule headers_module modules/mod_headers.so
-LoadModule usertrack_module modules/mod_usertrack.so
+#LoadModule usertrack_module modules/mod_usertrack.so
 LoadModule setenvif_module modules/mod_setenvif.so
 LoadModule mime_module modules/mod_mime.so
-LoadModule dav_module modules/mod_dav.so
+#LoadModule dav_module modules/mod_dav.so
 LoadModule status_module modules/mod_status.so
 LoadModule autoindex_module modules/mod_autoindex.so
 LoadModule info_module modules/mod_info.so
-LoadModule dav_fs_module modules/mod_dav_fs.so
+#LoadModule dav_fs_module modules/mod_dav_fs.so
 LoadModule vhost_alias_module modules/mod_vhost_alias.so
 LoadModule negotiation_module modules/mod_negotiation.so
 LoadModule dir_module modules/mod_dir.so
 LoadModule actions_module modules/mod_actions.so
-LoadModule speling_module modules/mod_speling.so
-LoadModule userdir_module modules/mod_userdir.so
+#LoadModule speling_module modules/mod_speling.so
+#LoadModule userdir_module modules/mod_userdir.so
 LoadModule alias_module modules/mod_alias.so
-LoadModule substitute_module modules/mod_substitute.so
+#LoadModule substitute_module modules/mod_substitute.so
 LoadModule rewrite_module modules/mod_rewrite.so
-LoadModule proxy_module modules/mod_proxy.so
-LoadModule proxy_balancer_module modules/mod_proxy_balancer.so
-LoadModule proxy_ftp_module modules/mod_proxy_ftp.so
-LoadModule proxy_http_module modules/mod_proxy_http.so
-LoadModule proxy_ajp_module modules/mod_proxy_ajp.so
-LoadModule proxy_connect_module modules/mod_proxy_connect.so
+#LoadModule proxy_module modules/mod_proxy.so
+#LoadModule proxy_balancer_module modules/mod_proxy_balancer.so
+#LoadModule proxy_ftp_module modules/mod_proxy_ftp.so
+#LoadModule proxy_http_module modules/mod_proxy_http.so
+#LoadModule proxy_ajp_module modules/mod_proxy_ajp.so
+#LoadModule proxy_connect_module modules/mod_proxy_connect.so
 LoadModule cache_module modules/mod_cache.so
 LoadModule suexec_module modules/mod_suexec.so
-LoadModule disk_cache_module modules/mod_disk_cache.so
+#LoadModule disk_cache_module modules/mod_disk_cache.so
 LoadModule cgi_module modules/mod_cgi.so
 LoadModule version_module modules/mod_version.so
 
@@ -217,18 +133,9 @@ LoadModule version_module modules/mod_version.so
 #LoadModule log_forensic_module modules/mod_log_forensic.so
 #LoadModule unique_id_module modules/mod_unique_id.so
 #
-
-#
-# Load config files from the config directory "/etc/httpd/conf.d".
-#
 Include conf.d/*.conf
 
-#
-# ExtendedStatus controls whether Apache will generate "full" status
-# information (ExtendedStatus On) or just basic information (ExtendedStatus
-# Off) when the "server-status" handler is called. The default is Off.
-#
-#ExtendedStatus On
+#ExtendedStatus Off
 
 #
 # If you wish httpd to run as a different user or group, you must run
@@ -276,8 +183,7 @@ ServerAdmin root@localhost
 # You will have to access it by its address anyway, and this will make
 # redirections work in a sensible way.
 #
-#ServerName www.example.com:80
-ServerName @@@redirect_httpd_ip_port%%%
+ServerName @@@internal_httpd_ip_port%%%
 
 #
 # UseCanonicalName: Determines how Apache constructs self-referencing
@@ -318,7 +224,7 @@ DocumentRoot "/var/www/html"
 #
 # This should be changed to whatever you set DocumentRoot to.
 #
-<Directory "/var/www/html">
+<Directory "/var/www/">
 
 #
 # Possible values for the Options directive are "None", "All",
@@ -339,7 +245,7 @@ DocumentRoot "/var/www/html"
 # It can be "All", "None", or any combination of the keywords:
 #   Options FileInfo AuthConfig Limit
 #
-    AllowOverride None
+    AllowOverride All
 
 #
 # Controls who can get stuff from this server.
@@ -537,7 +443,7 @@ CustomLog logs/access_log combined
 # Set to "EMail" to also include a mailto: link to the ServerAdmin.
 # Set to one of:  On | Off | EMail
 #
-ServerSignature On
+ServerSignature Off
 
 #
 # Aliases: Add here as many aliases as you need (with no limit). The format is
@@ -760,7 +666,7 @@ ForceLanguagePriority Prefer Fallback
 # in HTML content to override this choice, comment out this
 # directive:
 #
-AddDefaultCharset UTF-8
+AddDefaultCharset off
 
 #
 # AddType allows you to add to or override the MIME configuration
@@ -974,6 +880,29 @@ BrowserMatch "^Dreamweaver-WebDAV-SCM1" redirect-carefully
 #</IfModule>
 # End of proxy directives.
 
+#Alias /robots.txt /var/www/sites/admin/static/robots.txt
+#Alias /favicon.ico /var/www/sites/admin/static/favicon.ico
+
+#AliasMatch ^/([^/]*\.css) /var/www/sites/static/css/$1
+
+#Alias /media/ /var/www/sites/admin/media/
+#Alias /static/ /var/www/sites/admin/static/
+
+#<Directory /var/www/sites/admin/static>
+#Order deny,allow
+#Allow from all
+#</Directory>
+
+#WSGIScriptAlias / /var/www/sites/djsite/wsgi.py
+#WSGIPythonPath /var/www/sites
+
+#<Directory /var/www/sites/djsite>
+#<Files wsgi.py>
+#Order deny,allow
+#Allow from all
+#</Files>
+#</Directory>
+
 ### Section 3: Virtual Hosts
 #
 # VirtualHost: If you want to maintain multiple domains/hostnames on your
@@ -991,64 +920,71 @@ BrowserMatch "^Dreamweaver-WebDAV-SCM1" redirect-carefully
 #
 # Use name-based virtual hosting.
 #
-#
-# NOTE: NameVirtualHost cannot be used without a port specifier
-# (e.g. :80) if mod_ssl is being used, due to the nature of the
-# SSL protocol.
-#
+NameVirtualHost *:80
+NameVirtualHost *:442
+NameVirtualHost *:441
+NameVirtualHost *:440
+NameVirtualHost *:444
 
-#
-# VirtualHost example:
-# Almost any Apache directive may go into a VirtualHost container.
-# The first VirtualHost section is used for requests without a known
-# server name.
-#
-NameVirtualHost @@@internal_httpd_ip_port%%%
-<VirtualHost @@@internal_httpd_ip_port%%%>
-    DocumentRoot /var/www/html/internal/
-    ServerName @@@internal_httpd_ip_port%%%
-    ErrorLog logs/@@@internal_httpd_ip_port%%%-error_log
-    CustomLog logs/@@@internal_httpd_ip_port%%%-access_log common
-
+<VirtualHost *:80>
+ServerAdmin webmaster@dummy-host.example.com
+DocumentRoot /var/www/
+#ServerName dummy-host.example.com
+#ErrorLog logs/dummy-host.example.com-error_log
+#CustomLog logs/dummy-host.example.com-access_log common
 </VirtualHost>
 
-<Directory /var/www/html/internal/ >
-	AllowOverride All
+<Directory /var/www >
+AllowOverride All
 </Directory>
-
-NameVirtualHost @@@redirect_httpd_ip_port%%%
-<VirtualHost @@@redirect_httpd_ip_port%%%>
-    DocumentRoot /var/www/html/redirect/
-    ServerName @@@redirect_httpd_ip_port%%%
-    ErrorLog logs/@@@redirect_httpd_ip_port%%%-error_log
-    CustomLog logs/@@@redirect_httpd_ip_port%%%-access_log common
-
+#===============================================================
+<VirtualHost *:441>
+ServerAdmin webmaster@dummy-host.example.com
+DocumentRoot /usr/local/www/htdocs/speedlimit/
+#ServerName dummy-host.example.com
+#ErrorLog logs/dummy-host.example.com-error_log
+#CustomLog logs/dummy-host.example.com-access_log common
 </VirtualHost>
 
-<Directory /var/www/html/redirect/ >
-	AllowOverride All
+<Directory /usr/local/www/htdocs/speedlimit/ >
+AllowOverride All
 </Directory>
-
-NameVirtualHost @@@noauth_httpd_ip_port%%%
-<VirtualHost @@@noauth_httpd_ip_port%%%>
-    DocumentRoot /var/www/html/noauth/
-    ServerName @@@noauth_httpd_ip_port%%%
-    ErrorLog logs/@@@noauth_httpd_ip_port%%%-error_log
-    CustomLog logs/@@@noauth_httpd_ip_port%%%-access_log common
+#===============================================================
+<VirtualHost *:440>
+ServerAdmin webmaster@dummy-host.example.com
+DocumentRoot /usr/local/www/htdocs/noauth/
+#ServerName dummy-host.example.com
+#ErrorLog logs/dummy-host.example.com-error_log
+#CustomLog logs/dummy-host.example.com-access_log common
 </VirtualHost>
 
-<Directory /var/www/html/noauth/ >
-	AllowOverride All
+<Directory /usr/local/www/htdocs/noauth/ >
+AllowOverride All
 </Directory>
 
-NameVirtualHost @@@webauth_httpd_ip_port%%%
-<VirtualHost @@@webauth_httpd_ip_port%%%>
-    DocumentRoot /var/www/html/webauth/
-    ServerName @@@webauth_httpd_ip_port%%%
-    ErrorLog logs/@@@webauth_httpd_ip_port%%%-error_log
-    CustomLog logs/@@@webauth_httpd_ip_port%%%-access_log common
+#===============================================================
+<VirtualHost *:444>
+ServerAdmin webmaster@dummy-host.example.com
+DocumentRoot /usr/local/www/htdocs/blocked/
+#ServerName dummy-host.example.com
+#ErrorLog logs/dummy-host.example.com-error_log
+#CustomLog logs/dummy-host.example.com-access_log common
 </VirtualHost>
 
-<Directory /var/www/html/webauth/ >
-	AllowOverride All
+<Directory /usr/local/www/htdocs/blocked/ >
+AllowOverride All
 </Directory>
+
+#===============================================================
+<VirtualHost *:442>
+ServerAdmin webmaster@dummy-host.example.com
+DocumentRoot /usr/local/www/htdocs/negbal/
+#ServerName dummy-host.example.com
+#ErrorLog logs/dummy-host.example.com-error_log
+#CustomLog logs/dummy-host.example.com-access_log common
+</VirtualHost>
+
+<Directory /usr/local/www/htdocs/negbal/ >
+AllowOverride All
+</Directory>
+#===============================================================
