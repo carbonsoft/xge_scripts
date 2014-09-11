@@ -1,0 +1,2 @@
+RewriteEngine on
+RewriteRule !.*blocked\.php.* http://%{HTTP_HOST}/html/blocked.php?a=%{SERVER_ADDR}/url=http://%{SERVER_NAME}%{REQUEST_URI}?%{QUERY_STRING} [R=302,L,B,NE]

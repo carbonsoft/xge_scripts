@@ -12,7 +12,7 @@ echo "" >> $LOGFILE
 echo "$0[$$]: $PACKET_TYPE $PARAMS" >> $LOGFILE
 
 if [ "$PACKET_TYPE" = 'Disconnect-Request' ]; then
-	PARAMS="session disconnect $FRAMED_IP_ADDRESS"
+	PARAMS="session $FRAMED_IP_ADDRESS disconnect"
 fi
 
 REPLY="$( . /usr/local/bin/xgesh $PARAMS 2>&1)"
