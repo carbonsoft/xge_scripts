@@ -23,4 +23,4 @@ while read cmd data; do
 	fi
 done < $AUTHFILE >> $LOGFILE
 
-xgesh session start $1 $CTRL_TYPE
+xgesh session $1 start $CTRL_TYPE

@@ -40,16 +40,23 @@ vpn['auth.mschap2.widget']='checkbox "Включить MS-CHAP v2" ""'
 declare -A httpd
 httpd['internal_ip']='169.0.80.90'
 httpd['internal_page']='http://169.0.80.90/index.html'
-httpd['internal_page.widget']='inputbox "Главная страница внутреннего веб-сервера XGE" ""'
+# httpd['internal_page.widget']='inputbox "Главная страница внутреннего веб-сервера XGE" ""'
 httpd['redirect_ip']='169.0.80.91'
 httpd['redirect_page']='http://169.0.80.91/redirect.html'
-httpd['redirect_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+# httpd['redirect_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
 httpd['redirect_noauth_ip']='169.0.80.92'
 httpd['redirect_noauth_page']='http://169.0.80.92/noauth.php'
-httpd['redirect_noauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+# httpd['redirect_noauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
 httpd['redirect_webauth_ip']='169.0.80.93'
 httpd['redirect_webauth_page']='http://169.0.80.93/webauth.html'
-httpd['redirect_webauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+# httpd['redirect_webauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+
+httpd['redirect_negbal_url']='http://169.1.0.80/html/negbal.php'
+httpd['redirect_negbal_url.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+httpd['redirect_blocked_url']='http://169.1.0.80/html/blocked.php'
+httpd['redirect_blocked_url.widget']='inputbox "Страница редиректа заблокированных и не авторизованных абонентов" ""'
+httpd['redirect_noauth_url']='http://169.1.0.80/html/noauth.php'
+httpd['redirect_noauth_url.widget']='inputbox "Страница редиректа не авторизованных абонентов" ""'
 
 declare -A firewall
 firewall['enabled']='1'
@@ -58,6 +65,26 @@ firewall['new_limit_l']='2000'
 firewall['new_limit_l.widget']='inputbox "Ограничить колво новых соед/сек из лок.сети" "Рекомендуется 500-1000"'
 firewall['new_limit_e']='2000'
 firewall['new_limit_e.widget']='inputbox "Ограничить колво новых соед/сек из Интернет" "Рекомендуется 500-1000"'
+firewall['billing_ip']='169.1.0.80'
+firewall['billing_ip.widget']='inpubox "IP адрес для перенаправления" "Обычно IP биллинга"'
+
+declare -A qos
+qos['root_rate']='850000'
+qos['root_rate.widget']='inputbox "Суммараная ширина каналов kbit" ""'
+qos['reserved']=''
+qos['reserved.widget']='inputbox "Зарезервировать kbit из канала для веб-страниц" "по-умолчанию расчетная 5%, но не более 20000кбит"'
+
+qos['local_rate']='50000'
+qos['local_rate.widget']='inputbox "Гарантированная ширина для локального kbit" ""'
+
+qos['local_ceil']='500000'
+qos['local_ceil.widget']='inputbox "Максимальная ширина для локального kbit" ""'
+
+qos['city_rate']='50000'
+qos['city_rate.widget']='inputbox "Гарантированная ширина для городского трафика(пиринг) kbit" ""'
+
+qos['city_ceil']='500000'
+qos['city_ceil.widget']='inputbox "Максимальная ширина для городского трафика(пиринг) kbit" ""'
 
 declare -A remote_management
 remote_management['widget']='menu "Настройки управления маршрутизатором" "Пароль задаётся в настройках Radius"'
@@ -92,8 +119,12 @@ radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-се�
 
 declare -A networks
 networks['widget']='menu "Списки подсетей"'
-networks['noblock']=''
-networks['noblock.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
+networks['trusted_list']=''
+networks['trusted_list.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
+networks['local_net']='192.168.0.0/16 172.16.0.0/12 10.0.0.0/8'
+networks['local_net.widget']='inputbox "Список локальных сетей, которые доступны без ната" "Задавать через пробел"'
+networks['allow_list']=''
+networks['allow_list.widget']='inputbox "Список подсетей доступных всегда и всем, в т.ч. не авторизованным и заблокированным" "Задавать через пробел"'
 
 declare -A ctl
 ctl['start']='/service start'

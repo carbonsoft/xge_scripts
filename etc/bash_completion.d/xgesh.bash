@@ -1,6 +1,6 @@
 _xgesh_ip() {
 	local cur=${COMP_WORDS[COMP_CWORD]}
-	COMPREPLY=( $(compgen -W "forward_allow redirect snat" -- $cur) )
+	COMPREPLY=( $(compgen -W "accept_list negbal_list snat" -- $cur) )
 }
 complete -F _xgesh_ip xgesh ip
 

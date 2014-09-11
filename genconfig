@@ -131,40 +131,31 @@ gen_httpd_config() {
 	tmpltfile=/skelet/etc/httpd/conf/httpd.conf.tmplt
 
 	internal_httpd_ip_port=${httpd['internal_ip']}:80
-	redirect_httpd_ip_port=${httpd['redirect_ip']}:80
-	noauth_httpd_ip_port=${httpd['redirect_noauth_ip']}:80
-	webauth_httpd_ip_port=${httpd['redirect_webauth_ip']}:80
+	speedlimit_ip_port=${httpd['internal_ip']}:441
+	negbal_ip_port=${httpd['internal_ip']}:442
+	noauth_ip_port=${httpd['internal_ip']}:440
+	blocked_ip_port=${httpd['internal_ip']}:444
 
-	for i in internal_ip redirect_ip redirect_noauth_ip redirect_webauth_ip; do
+
+	internal_ip=${httpd['internal_ip']}
+	for i in internal_ip; do
 		ip addr add ${httpd[$i]}/8 dev dummy0
 	done &>/dev/null
 	genconfig
 
-	# redirect part
-	URL="${httpd['redirect_page']}"
-	conffile="/var/www/html/redirect/.htaccess"
-	tmpltfile="/skelet/var/www/html/redirect/.htaccess.tmplt"
+	conffile=/var/www/html/blocked.php
+	tmpltfile=/skelet/var/www/html/blocked.php.tmplt
+	redirect_blocked_url=${httpd['redirect_blocked_url']}
 	genconfig
 
-	# noauth part
-	URL="${httpd['redirect_noauth_page']}"
-	conffile="/var/www/html/noauth/.htaccess"
-	tmpltfile="/skelet/var/www/html/noauth/.htaccess.tmplt"
+	conffile=/var/www/html/negbal.php
+	tmpltfile=/skelet/var/www/html/negbal.php.tmplt
+	redirect_negbal_url=${httpd['redirect_negbal_url']}
 	genconfig
 
-	# webauth part
-	URL="${httpd['redirect_webauth_page']}"
-	conffile="/var/www/html/webauth/.htaccess"
-	tmpltfile="/skelet/var/www/html/webauth/.htaccess.tmplt"
-	genconfig
-
-	authserver="${radclient[authserver]}"
-	auth_port=${authserver##*:}
-	server=${authserver%%:*}
-	secret="${radclient[secret]}"
-	users_psw="${radclient[users_psw]}"
-	conffile="/var/www/html/noauth/noauth.php"
-	tmpltfile="/skelet/var/www/html/noauth/noauth.php.tmplt"
+	conffile=/var/www/html/noauth.php
+	tmpltfile=/skelet/var/www/html/noauth.php.tmplt
+	redirect_noauth_url=${httpd['redirect_noauth_url']}
 	genconfig
 }
 
