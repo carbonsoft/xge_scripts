@@ -157,7 +157,7 @@ session(){
 			return 1
 		fi
 
-		if [[ " start " != *" $session_cmd "* ]] && ! __session_exist $session_id; then
+		if [[ " start remove " != *" $session_cmd "* ]] && [ "$2" != "cancel" ] &&  ! __session_exist $session_id; then
 			echo "Session $session_id not found"
 			echo "xgesh session <session_id> start"
 			return 1
@@ -233,8 +233,8 @@ __session_remove() {
 	local session_id=$1
 	__session_disconnect $session_id
 	__session_nat $session_id cancel
-	__session_redirect $session_id redirect negbal cancel
-	__session_redirect $session_id redirect blocked cancel
+	__session_redirect $session_id negbal cancel
+	__session_redirect $session_id blocked cancel
 	__shaper_del $session_id
 	# todo delete from all ipsets
 	rm -f $session_dir/$session_id
@@ -544,6 +544,21 @@ __mac_show() {
 	echo ${FUNCNAME//_/ } $@
 	arp -n | grep -w $1
 }
+show(){
+	case $1 in
+	list )
+	    [ "$2" = "" ] && ipset -o save -l | grep add | cut -d ' ' -f 2,3 \
+		|| ipset -o save -l $2 | grep add | cut -d ' ' -f 3
+	    ;;
+	rate )
+	    echo 'todo tc filter join xge_auth_list key=ip printf 0x'
+	    echo 'нужно сделать вывод текущих реальных скоростей, в tc filter хранится integer ip его можно awk ip2string'
+	    ;;
+	*)
+	    echo "unknown command $@"
+	    ;;
+	esac
+}
 
 help() {
 	echo 'Usage: xgesh OBJECT { COMMAND }'
@@ -596,10 +611,16 @@ cmd() {
 	cmd=$1
 	shift
 	session_lock=${@//[^0-9 .]/}
+	[ "$cmd" = '--help' ] && cmd="help"
+	[ "$cmd" = '-h' ] && cmd="help"
+	[ "$cmd" = '?' ] && cmd="help"
 	[ "$cmd" = 'help' ] && session_lock='0000000000000000000'
 	session_lock=/var/lock/xge_${session_lock%% *}.lock
 	case $cmd in
-	#ip | filter | nat | session | rate | mac | help )
+	#ip | filter | nat | session | rate | mac | 
+	help | show )
+		$cmd $@
+		;;
 	session | mac)
 		exec 22>$session_lock
 		__session_id_lock

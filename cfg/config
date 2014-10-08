@@ -68,6 +68,24 @@ firewall['new_limit_e.widget']='inputbox "Ограничить колво нов
 firewall['billing_ip']='169.1.0.80'
 firewall['billing_ip.widget']='inpubox "IP адрес для перенаправления" "Обычно IP биллинга"'
 
+declare -A qos
+qos['root_rate']='850000'
+qos['root_rate.widget']='inputbox "Суммараная ширина каналов kbit" ""'
+qos['reserved']=''
+qos['reserved.widget']='inputbox "Зарезервировать kbit из канала для веб-страниц" "по-умолчанию расчетная 5%, но не более 20000кбит"'
+
+qos['local_rate']='50000'
+qos['local_rate.widget']='inputbox "Гарантированная ширина для локального kbit" ""'
+
+qos['local_ceil']='500000'
+qos['local_ceil.widget']='inputbox "Максимальная ширина для локального kbit" ""'
+
+qos['city_rate']='50000'
+qos['city_rate.widget']='inputbox "Гарантированная ширина для городского трафика(пиринг) kbit" ""'
+
+qos['city_ceil']='500000'
+qos['city_ceil.widget']='inputbox "Максимальная ширина для городского трафика(пиринг) kbit" ""'
+
 declare -A remote_management
 remote_management['widget']='menu "Настройки управления маршрутизатором" "Пароль задаётся в настройках Radius"'
 remote_management['carbon_coad.enabled.widget']='checkbox "Включить обработчик radius coa" "Без него XGE-Router не будет корректно работать"'
