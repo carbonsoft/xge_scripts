@@ -39,7 +39,7 @@ xge_nat() {
 	iptables -t nat -A xge_pre -d "${firewall['billing_ip']}" -j ACCEPT
 
 	# noauth
-	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_auth_list src -j DNAT --to-dest "${httpd['internal_ip']}":440
+	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_auth_list src -m set ! --set xge_auth_list dst -j DNAT --to-dest "${httpd['internal_ip']}":440
 
 	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_trust_blocked_list dst -j ACCEPT
 	# blocked
@@ -201,8 +201,6 @@ xge_filter() {
 	iptables -t filter -A xge_input -p udp --dport 520:521 -j ACCEPT
 	iptables -t filter -A xge_input -p udp --sport 520:521 -m state --state ESTABLISHED -j ACCEPT
 	# Баг старой зебры в новой не подтвержден iptables -t nat -A POSTROUTING -p udp --dport 520 -j SNAT --to-source :520
-	iptables -t mangle -I PREROUTING -d 224.0.0.9/32 -p udp --dport 520 -m addrtype --dst-type LOCAL -j ACCEPT
-
 
 	# quagga telnet
 	iptables -t filter -A xge_input -p tcp --dport 2600:2605 -j ACCEPT
@@ -283,6 +281,10 @@ xge_mangle() {
 	# маркируем соединения и шлём в шейперы
 	iptables -t mangle -A xge_pre -j MARK --src-save
 	iptables -t mangle -A xge_pre -j IMQ --todev 0
+
+	# ZEBRA
+	iptables -t mangle -I xge_pre -d 224.0.0.9/32 -p udp --dport 520 -m addrtype --dst-type LOCAL -j ACCEPT
+
 	iptables -t mangle -A xge_post -j MARK --dst-save
 	iptables -t mangle -A xge_post -j IMQ --todev 1
 
