@@ -299,7 +299,6 @@ start() {
 	xge_mangle
 	restore
 	xge_ipset_load
-	[ -x /usr/local/bin/firewall_hook ] && /usr/local/bin/firewall_hook || return 0
 }
 
 stop() {
