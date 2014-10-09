@@ -99,30 +99,11 @@ xge_ipset_load() {
 }
 
 xge_filter() {
-	# жаль L+ / E+ не прижились, теперь это таргеты
-	# iptables -N xge_wan_accept
-	# iptables -N xge_lan_accept
-	# iptables -N xge_wan_drop
-	# iptables -N xge_lan_drop
-
-	# for dev in $(network_parser wan_interfaces); do
-	# 	iptables -A xge_wan_accept -i $dev -j ACCEPT
-	# 	iptables -A xge_lan_accept -i $dev -j RETURN
-	# 	iptables -A xge_wan_drop -i $dev -j ACCEPT
-	# 	iptables -A xge_lan_drop -i $dev -j RETURN
-	# done
-
-	# iptables -A xge_lan_accept -j ACCEPT
-	# iptables -A xge_lan_drop -j ACCEPT
-
 	# цепочка для ULOG для nfusens
 	iptables -t filter -N xge_forward
 	iptables -t filter -A FORWARD -j xge_forward
 	iptables -t filter -N xge_ULOGd
 	iptables -t filter -A xge_ULOGd -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 50 --ulog-cprange 24
-	# iptables -t filter -A xge_forward -d 169.169.169.169 -j REJECT --reject-with icmp-admin-prohibited
-	# iptables -t filter -A xge_forward -m set --set xge_auth_list src -j xge_ULOGd
-	# iptables -t filter -A xge_forward -m set --set xge_auth_list dst -j xge_ULOGd
 	iptables -t filter -A xge_forward -j xge_ULOGd
 	# оптимизация бэкпорт из 4 iptables -t filter -A xge_forward -m conmark2=1 -m каждый не тысячный пакет -m не реже раз в 5 мин -m state --state ESTABLISHED -j ACCEPT
 	iptables -t filter -A xge_forward -d ${firewall['billing_ip']} -j ACCEPT
@@ -157,8 +138,8 @@ xge_filter() {
 	iptables -t filter -A xge_input -p tcp --dport 1723 -m set --set xge_local_net src -j ACCEPT
 	iptables -t filter -A xge_input -p 47 -m set --set xge_local_net src -j ACCEPT
 
-    # l2tp
-    iptables -t filter -A xge_input -p udp --dport 1701 -m set --set xge_local_net src -j ACCEPT
+	# l2tp
+	iptables -t filter -A xge_input -p udp --dport 1701 -m set --set xge_local_net src -j ACCEPT
 
 	# dns
 	iptables -t filter -A xge_input -p udp --dport 53 -j ACCEPT
