@@ -75,7 +75,6 @@ xge_ipset() {
 	ipset create xge_local_net hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_trust_blocked_list hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_trust_negbal_list hash:net family inet hashsize 65536 maxelem 65536
-	#ipset create xge_mangle_accept hash:ip family inet hashsize 65536 maxelem 65536
 }
 
 # load ip from configs
