@@ -1,7 +1,5 @@
 #/bin/bash
 
-##. /etc/rc.d/init.d/functions
-
 TMP_DIR=/tmp/users_test
 mkdir -p $TMP_DIR
 
