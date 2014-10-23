@@ -113,15 +113,15 @@ xge_filter() {
 	# Все, что не auth_list дропаем
 	iptables -t filter -A xge_forward -m set ! --set xge_auth_list src -m set ! --set xge_auth_list dst -j DROP
 
-	iptables -t filter -A xge_forward -m set --set xge_trust_blocked_list dst -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_trust_blocked_list src -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trust_blocked_list dst --set xge_auth_list dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trust_blocked_list src --set xge_auth_list src -j ACCEPT
 
 	# redirect_blocked drop
 	iptables -t filter -A xge_forward -m set --set xge_blocked_list dst -j DROP
 	iptables -t filter -A xge_forward -m set --set xge_blocked_list src -j DROP
 
-	iptables -t filter -A xge_forward -m set --set xge_trust_negbal_list src -j ACCEPT
-	iptables -t filter -A xge_forward -m set --set xge_trust_negbal_list dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trust_negbal_list src --set xge_auth_list dst -j ACCEPT
+	iptables -t filter -A xge_forward -m set --set xge_trust_negbal_list dst --set xge_auth_list src -j ACCEPT
 	# redirect_negbal drop
 	iptables -t filter -A xge_forward -m set --set xge_negbal_list dst -j DROP
 	iptables -t filter -A xge_forward -m set --set xge_negbal_list src -j DROP
