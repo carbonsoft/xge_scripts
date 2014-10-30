@@ -69,6 +69,7 @@ firewall['billing_ip']='169.1.0.80'
 firewall['billing_ip.widget']='inpubox "IP адрес для перенаправления" "Обычно IP биллинга"'
 
 declare -A qos
+qos['widget']='menu "Настройки канала"'
 qos['root_rate']='850000'
 qos['root_rate.widget']='inputbox "Суммараная ширина каналов kbit" ""'
 qos['reserved']=''
