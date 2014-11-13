@@ -34,7 +34,6 @@ xge_nat() {
 	iptables -t nat -N xge_user2snat
 
 	# dnat
-
 	iptables -t nat -A xge_pre -s "${firewall['billing_ip']}" -j ACCEPT
 	iptables -t nat -A xge_pre -d "${firewall['billing_ip']}" -j ACCEPT
 

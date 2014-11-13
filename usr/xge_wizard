@@ -1,0 +1,81 @@
+#!/bin/bash
+
+. /cfg/config
+
+TMPDIR=/tmp/xge_wizard
+mkdir -p $TMPDIR
+
+tmp_config=${TMPDIR}/tmp_config.$$
+
+wizard_prepare() {
+    config_resort > ${tmp_config}
+}
+
+save_to_tmp_config() {
+    local var_name=$1
+    local val=$2
+    local tmp_config1=${TMPDIR}/tmp_config1.$$
+
+    local grep_var_name="$( echo "$var_name" | sed -e 's/\[/\\[/g; s/\]/\\]/g;' )"
+
+    grep -v "$grep_var_name" ${tmp_config} > ${tmp_config1}
+    echo "${var_name}='$val'" >> ${tmp_config1}
+    mv ${tmp_config1} ${tmp_config}
+}
+
+show_dialog() {
+    local var_name="$1"
+    local widget="$2"
+    local val="$3"
+
+    widget="$( echo $widget | sed -e 's/inputbox//g; s/"//g; s/\s\+/ /g;' )"
+    val="$( dialog --output-fd 1 --inputbox "$widget" 10 60 "$val" )"
+    [ "$?" != "0" ] && exit 1
+    save_to_tmp_config "$var_name" "$val"
+}
+
+vars_dialog() {
+    show_dialog "radclient['nas_identifier']" "${radclient['nas_identifier.widget']}" "${radclient['nas_identifier']}"
+    show_dialog "firewall['billing_ip']" "${firewall['billing_ip.widget']}" "${firewall['billing_ip']}"
+    show_dialog "networks['trust_blocked_list']" "${networks['trust_blocked_list.widget']}" "${networks['trust_blocked_list']}"
+    show_dialog "networks['trust_negbal_list']" "${networks['trust_negbal_list.widget']}" "${networks['trust_negbal_list']}"
+    show_dialog "networks['local_net']" "${networks['local_net.widget']}" "${networks['local_net']}"
+}
+
+calc_vars_to_tmp_config() {
+    local billing_ip=$1
+
+    save_to_tmp_config "radclient['coa_client.ip']" "${billing_ip}"
+    save_to_tmp_config "radclient['authserver']" "${billing_ip}:1812"
+    save_to_tmp_config "radclient['acctserver']" "${billing_ip}:1813"
+    save_to_tmp_config "nfusens['collector']" "${billing_ip}:9996"
+    save_to_tmp_config "httpd['redirect_noauth_url']" "http://${billing_ip}/html/noauth.php"
+    save_to_tmp_config "httpd['redirect_negbal_url']" "http://${billing_ip}/html/negbal.php"
+    save_to_tmp_config "httpd['redirect_blocked_url']" "http://${billing_ip}/html/blocked.php"
+}
+
+wizard_commit(){
+    mv /cfg/config /cfg/config.bk
+    config_resort ${tmp_config} > /cfg/config
+}
+
+main() {
+    wizard_prepare
+    
+    hello_msg="Добро пожаловать в мастер настройки XGE! \n\n\
+Он позволит настроить связку XGE с CarbonSoftBlling. \n\n\
+Дальнейшую настройку можно провести в веб интерфейсе или введя команду menu в командной строке биллинга,\n\
+подробности есть в онлайн-документации docs.carbonsoft.ru.\n"
+
+    if ! dialog --yes-label "Продолжить" --no-label "Отложить" --yesno "$hello_msg" 13 60; then
+        exit 0
+    fi
+
+    
+    vars_dialog
+    calc_vars_to_tmp_config "${firewall['billing_ip']}"
+
+    if dialog --yes-label "Ок" --no-label "Отмена" --yesno "Сохранить настройки?" 13 60; then wizard_commit; fi
+}
+
+main
