@@ -38,6 +38,7 @@ vpn['auth.mschap2']='1'
 vpn['auth.mschap2.widget']='checkbox "Включить MS-CHAP v2" ""'
 
 declare -A httpd
+httpd['widget']='menu "Настройки встроенного редиректа"'
 httpd['internal_ip']='169.0.80.90'
 httpd['internal_page']='http://169.0.80.90/index.html'
 # httpd['internal_page.widget']='inputbox "Главная страница внутреннего веб-сервера XGE" ""'
@@ -59,6 +60,7 @@ httpd['redirect_noauth_url']='http://169.1.0.80/html/noauth.php'
 httpd['redirect_noauth_url.widget']='inputbox "Страница редиректа не авторизованных абонентов" ""'
 
 declare -A firewall
+firewall['widget']='menu "Настройки файрвола"'
 firewall['enabled']='1'
 firewall['enabled.widget']='checkbox "Включить файрвол" ""'
 firewall['new_limit_l']='2000'
