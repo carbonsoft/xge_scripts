@@ -241,7 +241,11 @@ __session_remove() {
 }
 
 __session_test() {
-	session_test.sh $1
+        if [ "$2" == "human" ]; then
+                /usr/local/bin/session_test_human.sh $1
+        else
+                session_test.sh $1
+        fi
 }
 
 __session_exist(){
