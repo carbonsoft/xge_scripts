@@ -133,3 +133,8 @@ ctl['status']='/service status'
 declare -A mount
 mount['proc']='-t proc none /app/xge/proc'
 mount['dev']='-t devtmpfs none /app/xge/dev'
+
+declare -A named
+named['widget']='menu "Настройки DNS сервера"'
+named['enabled']='0'
+named['enabled.widget']='checkbox "Включить DNS сервер" ""'
