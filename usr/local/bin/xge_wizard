@@ -9,7 +9,7 @@ tmp_config=${TMPDIR}/tmp_config.$$
 tmp_config1=${TMPDIR}/tmp_config1.$$
 
 wizard_prepare() {
-	config_resort > ${tmp_config}
+	cp /cfg/config ${tmp_config}
 }
 
 save_to_tmp_config() {
@@ -56,7 +56,7 @@ calc_vars_to_tmp_config() {
 
 wizard_commit(){
 	cp -a /cfg/config /cfg/config.bk
-	config_resort ${tmp_config} > ${tmp_config1}
+	cp ${tmp_config} /cfg/config
 	if [ "$?" = "0" ]; then
 		dialog --msgbox "Сохранение настроек прошло успешно." 0 0
 	else
