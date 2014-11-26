@@ -242,7 +242,7 @@ __session_remove() {
 
 __session_test() {
         if [ "$2" == "human" ]; then
-                /usr/local/bin/session_test_human.sh $1
+                /usr/local/bin/session_test_human $1
         else
                 session_test.sh $1
         fi
