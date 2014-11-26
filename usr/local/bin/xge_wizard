@@ -55,7 +55,7 @@ calc_vars_to_tmp_config() {
 }
 
 wizard_commit(){
-	cp -a /cfg/config /cfg/config.bk
+	cp -a /cfg/config /cfg/config.wizard_bk_"$( date '+%y.%m.%d_%H.%M' )"
 	cp ${tmp_config} /cfg/config
 	if [ "$?" = "0" ]; then
 		dialog --msgbox "Сохранение настроек прошло успешно." 0 0

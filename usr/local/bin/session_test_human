@@ -35,11 +35,11 @@ session_lists() {
 }
 
 session_speeds() {
-    read _class _htb _class_d _parent _parent_id _leaf _leaf_id _prio _prio_id _rate tc_rate_in _ceil tc_ceil_in _burst tc_burst_in _cburst tc_cburst_in <<< "$( tc class show dev imq1 classid 1:2001 )"
-    read _class _htb _class_d _parent _parent_id _leaf _leaf_id _prio _prio_id _rate tc_rate_out _ceil tc_ceil_out _burst tc_burst_out _cburst tc_cburst_out <<< "$( tc class show dev imq0 classid 1:2001 )"
+    read _class _htb _class_d _parent _parent_id _leaf _leaf_id _prio _prio_id _rate tc_rate_in _ceil tc_ceil_in _burst tc_burst_in _cburst tc_cburst_in <<< "$( tc class show dev imq1 classid 1:${class_id} )"
+    read _class _htb _class_d _parent _parent_id _leaf _leaf_id _prio _prio_id _rate tc_rate_out _ceil tc_ceil_out _burst tc_burst_out _cburst tc_cburst_out <<< "$( tc class show dev imq0 classid 1:${class_id} )"
 
-    read _rate cur_rate_in pps t <<< "$( tc -s class show dev imq1 classid 1:2001 | grep 'rate.*requeues' )"
-    read _rate cur_rate_out pps t <<< "$( tc -s class show dev imq0 classid 1:2001 | grep 'rate.*requeues' )"
+    read _rate cur_rate_in pps t <<< "$( tc -s class show dev imq1 classid 1:${class_id} | grep 'rate.*requeues' )"
+    read _rate cur_rate_out pps t <<< "$( tc -s class show dev imq0 classid 1:${class_id} | grep 'rate.*requeues' )"
 
     echo "User speed(config rate out): $tc_rate_out"
     echo "User speed(config ceil out): $tc_ceil_out"
