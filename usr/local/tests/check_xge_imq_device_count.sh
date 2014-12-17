@@ -8,4 +8,4 @@ error() {
 	log "Неправильное количество IMQ-девайсов"
 }
 
-. /usr/local/lib/angel main_critical
+. /usr/local/lib/angel main

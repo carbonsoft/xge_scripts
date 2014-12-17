@@ -9,4 +9,4 @@ error() {
 	log "Не слушает внутренний http-сервер XGE"
 }
 
-. /usr/local/lib/angel main_critical
+. /usr/local/lib/angel main

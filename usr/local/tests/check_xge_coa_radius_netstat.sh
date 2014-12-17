@@ -13,4 +13,4 @@ fix() {
 	/etc/init.d/radiusd restart	
 }
 
-. /usr/local/lib/angel main_critical
+. /usr/local/lib/angel main

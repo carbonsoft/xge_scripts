@@ -12,4 +12,4 @@ fix() {
 	/etc/init.d/accel-pppd restart
 }
 
-. /usr/local/lib/angel main_critical
+. /usr/local/lib/angel main
