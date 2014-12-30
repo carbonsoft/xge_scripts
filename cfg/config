@@ -131,10 +131,10 @@ ctl['stop']='/service stop'
 ctl['status']='/service status'
 
 declare -A mount
-mount['proc']='-t proc none /app/xge/proc'
-mount['dev']='-t devtmpfs none /app/xge/dev'
+mount['proc']='-t proc none /proc'
+mount['dev']='-t devtmpfs none /dev'
 
 declare -A named
 named['widget']='menu "Настройки DNS сервера"'
-named['enabled']='0'
+named['enabled']='1'
 named['enabled.widget']='checkbox "Включить DNS сервер" ""'
