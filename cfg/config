@@ -55,6 +55,11 @@ httpd['redirect_blocked_url.widget']='inputbox "Страница редирек�
 httpd['redirect_noauth_url']='http://169.1.0.80/html/noauth.php'
 httpd['redirect_noauth_url.widget']='inputbox "Страница редиректа не авторизованных абонентов" ""'
 
+httpd['redirect_webauth.enabled']='0'
+httpd['redirect_webauth.enabled.widget']='checkbox "Включить веб-авторизацию" ""'
+httpd['redirect_webauth_url']='http://169.0.80.90/html/webauth.php'
+httpd['redirect_webauth_url.widget']='inputbox "Страница редиректа веб-авторизации" ""'
+
 declare -A firewall
 firewall['widget']='menu "Настройки файрвола"'
 firewall['enabled']='1'

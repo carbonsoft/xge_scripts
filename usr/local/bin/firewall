@@ -38,7 +38,11 @@ xge_nat() {
 	iptables -t nat -A xge_pre -d "${firewall['billing_ip']}" -j ACCEPT
 
 	# noauth
-	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_auth_list src -m set ! --set xge_auth_list dst -j DNAT --to-dest "${httpd['internal_ip']}":440
+	if [ "${httpd['redirect_webauth.enabled']}" -eq "1" ]; then
+		iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_auth_list src -m set ! --set xge_auth_list dst -j DNAT --to-dest "${httpd['internal_ip']}":446
+	else
+		iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set ! --set xge_auth_list src -m set ! --set xge_auth_list dst -j DNAT --to-dest "${httpd['internal_ip']}":440
+	fi
 
 	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_trust_blocked_list dst -j ACCEPT
 	# blocked

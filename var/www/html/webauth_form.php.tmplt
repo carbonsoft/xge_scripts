@@ -1,0 +1,31 @@
+<?
+?>
+
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>
+            Веб-авторизация
+        </title>
+    </head>
+    <body>
+        Введите логин и пароль
+        <form action="@@@webauth_url%%%" method="post">
+            <p>
+                <label for="username">
+                    Имя: 
+                </label>
+                <input type="text" name="username" />
+                <br />
+
+                <label for="password">
+                    Пароль: 
+                </label>
+                <input name="password" class="inbox" size="25" type="password" />
+                <br />
+                <input type="submit" value="Авторизоваться">
+                <br />
+            </p>
+        </form>
+    </body>
+</html>
