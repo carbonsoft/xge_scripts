@@ -132,5 +132,5 @@ ctl['stop']='/service stop'
 ctl['status']='/service status'
 
 declare -A mount
-mount['proc']='-t proc none /app/xge/proc'
-mount['dev']='-t devtmpfs none /app/xge/dev'
+mount['proc']='-t proc none /proc'
+mount['dev']='-t devtmpfs none /dev'
