@@ -20,13 +20,13 @@
 ?>
 
                     <div class="pure-control-group">
-                        <label for="name">Логин</label>
-                        <input id="name" type="text" placeholder="user123">
+                        <label for="username">Логин</label>
+                        <input name="username" type="text" placeholder="user123">
                     </div>
 
                     <div class="pure-control-group">
                         <label for="password">Пароль</label>
-                        <input id="password" type="password" placeholder="secretpassword">
+                        <input name="password" type="password" placeholder="secretpassword">
                     </div>
 
                     <div class="pure-controls">

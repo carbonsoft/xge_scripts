@@ -164,12 +164,12 @@ gen_httpd_config() {
 	server=${authserver%%:*}
 	secret="${radclient[secret]}"
 	conffile="/var/www/html/webauth.php"
-	tmpltfile="/skelet/var/www/html/webauth/webauth.php.tmplt"
+	tmpltfile="/skelet/var/www/html/webauth.php.tmplt"
 	genconfig
 
 	webauth_url="${httpd['redirect_webauth_url']}"
 	conffile="/var/www/html/webauth_form.php"
-	tmpltfile="/skelet/var/www/html/webauth/webauth_form.php.tmplt"
+	tmpltfile="/skelet/var/www/html/webauth_form.php.tmplt"
 	genconfig
 }
 
