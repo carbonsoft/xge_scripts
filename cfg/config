@@ -39,15 +39,8 @@ vpn['auth.mschap2.widget']='checkbox "Включить MS-CHAP v2" ""'
 
 declare -A httpd
 httpd['widget']='menu "Настройки встроенного редиректа"'
-httpd['internal_ip']='169.0.80.90'
-httpd['internal_page']='http://169.0.80.90/index.html'
-httpd['redirect_ip']='169.0.80.91'
-httpd['redirect_page']='http://169.0.80.91/redirect.html'
-httpd['redirect_noauth_ip']='169.0.80.92'
-httpd['redirect_noauth_page']='http://169.0.80.92/noauth.php'
-httpd['redirect_webauth_ip']='169.0.80.93'
-httpd['redirect_webauth_page']='http://169.0.80.93/webauth.html'
 
+httpd['internal_ip']='169.0.80.90'
 httpd['redirect_negbal_url']='http://169.1.0.80/html/negbal.php'
 httpd['redirect_negbal_url.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
 httpd['redirect_blocked_url']='http://169.1.0.80/html/blocked.php'

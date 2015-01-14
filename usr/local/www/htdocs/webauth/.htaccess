@@ -1,2 +1,3 @@
 RewriteEngine on
-RewriteRule !.*webauth_form\.php.* http://%{HTTP_HOST}/html/webauth_form.php?a=%{SERVER_ADDR}/url=http://%{SERVER_NAME}%{REQUEST_URI}?%{QUERY_STRING} [R=302,L,B,NE]
+#RewriteRule !.*webauth_form\.php.* http://%{HTTP_HOST}/html/webauth_form.php?a=%{SERVER_ADDR}/url=http://%{SERVER_NAME}%{REQUEST_URI}?%{QUERY_STRING} [R=302,L,B,NE]
+RewriteRule !.*webauth_form\.php.* http://%{SERVER_ADDR}/html/webauth_form.php?orig_url="http://%{SERVER_NAME}%{REQUEST_URI}?%{QUERY_STRING}" [R=302,L,B,NE]

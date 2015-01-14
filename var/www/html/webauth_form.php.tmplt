@@ -15,6 +15,10 @@
             <form action="@@@webauth_url%%%" method="post" class="pure-form pure-form-aligned">
                 <p style="text-align: center">Вы не авторизованны. Введите логин и пароль.</p>
                 <fieldset>
+<?php
+              echo '<input type="hidden" name="orig_url" value="'.$_GET['orig_url'].'"/>'
+?>
+
                     <div class="pure-control-group">
                         <label for="name">Логин</label>
                         <input id="name" type="text" placeholder="user123">

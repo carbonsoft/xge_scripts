@@ -513,7 +513,7 @@ function show_error($radh, $error) {
                 $_SESSION[$ban_key]=0;
         }
         if ((($_SESSION[$ban_key]+10)<time()) and $_SERVER['HTTP_HOST'] != '169.0.80.92'){
-            header( 'Location: http://'.$_SERVER['HTTP_HOST'].'/'.$_GET['url'], true, 302 );
+            header( 'Location: '.$_POST['orig_url'], true, 302 );
             $_SESSION[$ban_key]=time();
             
         } else {

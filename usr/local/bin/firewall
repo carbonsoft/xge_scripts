@@ -26,8 +26,6 @@ shaper=/usr/local/bin/shaper.sh
 
 ip_regex='([0-9]{1,3}\.){3}[0-9]{1,3}'
 
-#TODO: обратно iptables -t nat -A xge_redirect_noauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_noauth_ip']}:80
-#TODO: iptables -t nat -A xge_redirect_webauth -p tcp --dport 80 -j DNAT --to-dest ${httpd['redirect_webauth_ip']}:80
 xge_nat() {
 	iptables -t nat -N xge_pre
 	iptables -t nat -N xge_post
@@ -149,10 +147,6 @@ xge_filter() {
 
 	# локальный вебсервер редиректов и авторизации
 	iptables -t filter -A xge_input -d "${httpd['internal_ip']}" -j ACCEPT
-	# auth
-	# [ -n "${httpd['redirect_ip']}" ] && iptables -t filter -A xge_input -d ${httpd['redirect_ip']} -j ACCEPT
-	# [ -n "${httpd['redirect_noauth_ip']}" ] && iptables -t filter -A xge_input -d ${httpd['redirect_noauth_ip']} -j ACCEPT
-	# [ -n "${httpd['redirect_webauth_ip']}" ] && iptables -t filter -A xge_input -d ${httpd['redirect_webauth_ip']} -j ACCEPT
 
 	# radius coa, TODO fix range
 	if [ -n "${radclient['coa_client.ip']}" -a -n "${radclient['coa_server.port']}" ]; then
