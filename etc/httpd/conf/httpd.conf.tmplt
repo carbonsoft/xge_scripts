@@ -54,6 +54,7 @@ Listen @@@negbal_ip_port%%%
 Listen @@@speedlimit_ip_port%%%
 Listen @@@noauth_ip_port%%%
 Listen @@@blocked_ip_port%%%
+Listen @@@webauth_ip_port%%%
 #
 # Dynamic Shared Object (DSO) Support
 #
@@ -925,6 +926,7 @@ NameVirtualHost *:442
 NameVirtualHost *:441
 NameVirtualHost *:440
 NameVirtualHost *:444
+NameVirtualHost *:446
 
 <VirtualHost *:80>
 ServerAdmin webmaster@dummy-host.example.com
@@ -985,6 +987,16 @@ DocumentRoot /usr/local/www/htdocs/negbal/
 </VirtualHost>
 
 <Directory /usr/local/www/htdocs/negbal/ >
+AllowOverride All
+</Directory>
+#===============================================================
+
+<VirtualHost *:446>
+ServerAdmin webmaster@dummy-host.example.com
+DocumentRoot /usr/local/www/htdocs/webauth/
+</VirtualHost>
+
+<Directory /usr/local/www/htdocs/webauth/ >
 AllowOverride All
 </Directory>
 #===============================================================

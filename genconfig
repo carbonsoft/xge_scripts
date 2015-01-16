@@ -135,6 +135,7 @@ gen_httpd_config() {
 	negbal_ip_port=${httpd['internal_ip']}:442
 	noauth_ip_port=${httpd['internal_ip']}:440
 	blocked_ip_port=${httpd['internal_ip']}:444
+	webauth_ip_port=${httpd['internal_ip']}:446
 
 
 	internal_ip=${httpd['internal_ip']}
@@ -156,6 +157,19 @@ gen_httpd_config() {
 	conffile=/var/www/html/noauth.php
 	tmpltfile=/skelet/var/www/html/noauth.php.tmplt
 	redirect_noauth_url=${httpd['redirect_noauth_url']}
+	genconfig
+
+	authserver="${radclient[authserver]}"
+	auth_port=${authserver##*:}
+	server=${authserver%%:*}
+	secret="${radclient[secret]}"
+	conffile="/var/www/html/webauth.php"
+	tmpltfile="/skelet/var/www/html/webauth.php.tmplt"
+	genconfig
+
+	webauth_url="${httpd['redirect_webauth_url']}"
+	conffile="/var/www/html/webauth_form.php"
+	tmpltfile="/skelet/var/www/html/webauth_form.php.tmplt"
 	genconfig
 }
 
