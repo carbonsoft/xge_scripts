@@ -1,0 +1,83 @@
+#!/bin/bash
+
+prepare() {
+    local session=$1
+    local paramlist='class_id|state|type|terminate_cause'
+    eval "$( xgesh session $session info  | sed -E 's/=(.*)/="\1"/g; s/ "$/"/g' | egrep $paramlist )"
+}
+
+session_ip() {
+    local session=$1
+    echo User IP: $session
+
+    read A chain s src_ip j SNAT to_source snat_ip <<< "$( iptables-save -t nat | grep $session )"
+    echo User snat IP: ${snat_ip:--}
+}
+
+session_lists() {
+    auth=NO
+    blocked=NO
+    negbal=NO
+    lists='koko'
+    while read add list ipa; do
+        [ "$list" = xge_auth_list ] && { auth=YES; continue; }
+        [ "$list" = xge_blocked_list ] && { blocked=YES; continue; }
+        [ "$list" = xge_negbal_list ] && { negbal=YES; continue; }
+
+        lists="$lists $list"
+    done <<< "$(ipset save | grep $session )"
+
+    echo "Авторизован(xge_auth_list): $auth"
+    echo "Заблокирован(xge_blocked_list): $blocked"
+    echo "Должник(xge_negbal_list): $negbal"
+
+    [ -z "${lists}" ] && echo $lists | tr ' ' '\n' | sed -e 's/service_in_[0-9]\+//g; s/service_out_[0-9]\+//g; s/.*/Неизвестный список(&):  YES/g'
+}
+
+session_speeds() {
+    read _class _htb _class_d _parent _parent_id _leaf _leaf_id _prio _prio_id _rate tc_rate_in _ceil tc_ceil_in _burst tc_burst_in _cburst tc_cburst_in <<< "$( tc class show dev imq1 classid 1:${class_id} )"
+    read _class _htb _class_d _parent _parent_id _leaf _leaf_id _prio _prio_id _rate tc_rate_out _ceil tc_ceil_out _burst tc_burst_out _cburst tc_cburst_out <<< "$( tc class show dev imq0 classid 1:${class_id} )"
+
+    read _rate cur_rate_in pps t <<< "$( tc -s class show dev imq1 classid 1:${class_id} | grep 'rate.*requeues' )"
+    read _rate cur_rate_out pps t <<< "$( tc -s class show dev imq0 classid 1:${class_id} | grep 'rate.*requeues' )"
+
+    echo "User speed(config rate out): $tc_rate_out"
+    echo "User speed(config ceil out): $tc_ceil_out"
+    echo "User speed(current rate out): $cur_rate_out"
+
+    echo "User speed(config rate in): $tc_rate_in"
+    echo "User speed(config ceil in): $tc_ceil_in"
+    echo "User speed(current rate in): $cur_rate_in"
+}
+
+session_ping() {
+    local session=$1
+    ping_rez="$( ping -c 4 $session -W1 | tail -n 2 | head -n 1 )"
+
+    echo Ping $session: $ping_rez
+}
+
+session_arp() {
+    local session=$1
+    echo -n "User arp record:"
+    ip neig show | grep $session
+}
+
+session_tcpdump() {
+    echo "tcpdump-будет позже"
+}
+
+
+main() {
+    local session=$1
+    prepare $session
+
+    session_ip $session
+    session_lists $session
+    session_speeds $session
+    session_ping $session
+    session_arp $session
+    session_tcpdump $session
+}
+
+main "$@"

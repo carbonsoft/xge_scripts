@@ -10,6 +10,11 @@ fi
 # arp
 echo 1 > /proc/sys/net/ipv4/conf/all/arp_filter
 
+# disable rf filter
+find /proc/sys/net/ipv4//conf/ -type f -name "rp_filter" | while read proc; do
+	echo 0 > $proc
+done
+
 # route cache
 echo 1 > /proc/sys/net/ipv4/route/gc_min_interval
 echo 1 > /proc/sys/net/ipv4/route/gc_elasticity
@@ -50,3 +55,4 @@ echo 0 > /proc/sys/net/ipv4/conf/all/send_redirects
 # /proc/sys/net/netfilter/nf_conntrack_generic_timeout		600		300
 # /proc/sys/net/netfilter/nf_conntrack_max			65536		262144
 # /proc/sys/net/ipv4/conf/all/send_redirects			1		0
+# /proc/sys/net/ipv4/conf/all/rp_filter				1		0
