@@ -22,6 +22,8 @@ declare -A vpn
 vpn['widget']='menu "Настройки VPN сервера" ""'
 vpn['enabled']='1'
 vpn['enabled.widget']='checkbox "Включить VPN-сервер" ""'
+vpn['pptp.allow_external']='0'
+vpn['pptp.allow_external.widget']='checkbox "Разрешить PPTP подключения со всех сетей" ""'
 vpn['pptp.enabled']='1'
 vpn['pptp.enabled.widget']='checkbox "Включить поддержку PPTP" ""'
 vpn['pppoe.enabled']='1'
