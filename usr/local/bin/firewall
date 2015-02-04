@@ -17,7 +17,8 @@ _exit() {
 . /cfg/config
 app=${app['appname']}
 . /usr/local/lib/carbon_firewall_lib
-
+. /usr/local/bin/app_config.sh
+. /usr/local/lib/carbon_channels_lib
 
 config=/var/lib/users.dat
 usersd=/usr/local/sbin/firewall_usersd
@@ -49,6 +50,10 @@ xge_nat() {
 	# negbal
 	iptables -t nat -A xge_pre -p tcp --dport 80 -m addrtype ! --dst-type LOCAL -m set --set xge_negbal_list src -m set ! --set xge_trust_negbal_list dst -j DNAT --to-dest "${httpd['internal_ip']}":442
 
+	# for balance and reservation
+	channels_chains
+	channels_reservation_rules
+
 	# snat
 	iptables_file=/tmp/firewall/iptables_file.nat.$$
 	echo "#" > $iptables_file
@@ -76,6 +81,10 @@ xge_ipset() {
 	ipset create xge_local_net hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_trust_blocked_list hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_trust_negbal_list hash:net family inet hashsize 65536 maxelem 65536
+
+	# for balance and reservation
+	channels_ipset
+
 }
 
 # load ip from configs
@@ -138,7 +147,7 @@ xge_filter() {
 
 	iptables -t filter -A xge_input -p tcp --dport 1723 -m set --set xge_local_net src -j ACCEPT
 	iptables -t filter -A xge_input -p 47 -m set --set xge_local_net src -j ACCEPT
-	if [ ${vpn['pptp.allow_external']} = '1' ]; then
+	if [ "${vpn['pptp.allow_external']:-0}" = '1' ]; then
 		iptables -t filter -A xge_input -p tcp --dport 1723 -j ACCEPT
 		iptables -t filter -A xge_input -p 47 -j ACCEPT
 	fi
@@ -218,7 +227,7 @@ create_new_pkt_limit() {
 		for i in {0..7}; do
 			iptables -t mangle -A xge_new_limit_l_udp -p udp -s 0.0.0.$i/0.0.0.7 -m limit --limit $limit/sec --limit-burst 5 -j RETURN
 		done
-		iptables -t mangle -A xge_new_limit_l_udp -p udp -m limit --limit 6/min -j LOG --log-level debug --log-prefix 'NET_${new_limit_l}_UDP_DROP '
+		iptables -t mangle -A xge_new_limit_l_udp -p udp -m limit --limit 6/min -j LOG --log-level debug --log-prefix "NET_${new_limit_l}_UDP_DROP "
 		iptables -t mangle -A xge_new_limit_l_udp -j DROP
 	fi
 
@@ -243,7 +252,7 @@ create_new_pkt_limit() {
 		for i in {0..7}; do
 			iptables -t mangle -A xge_new_limit_e_udp -p udp -s 0.0.0.$i/0.0.0.7 -m limit --limit $limit/sec --limit-burst 5 -j RETURN
 		done
-		iptables -t mangle -A xge_new_limit_e_udp -p udp -m limit --limit 6/min -j LOG --log-level debug --log-prefix 'NET_${new_limit_l}_UDP_DROP '
+		iptables -t mangle -A xge_new_limit_e_udp -p udp -m limit --limit 6/min -j LOG --log-level debug --log-prefix "NET_${new_limit_l}_UDP_DROP "
 		iptables -t mangle -A xge_new_limit_e_udp -j DROP
 	fi
 }

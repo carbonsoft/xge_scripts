@@ -2,6 +2,9 @@
 PS4='+ ${BASH_SOURCE##*/}($LINENO): ${FUNCNAME:-}: '
 export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/:/usr/local/bin/"
 
+. /usr/local/bin/app_config.sh
+. /usr/local/lib/carbon_channels_lib
+
 #set -eux
 #TODO: transparent ipset
 #TODO: transparent iptables
@@ -500,10 +503,40 @@ __snat_cache_refresh() {
 	fi
 }
 
+__channel_ipset_add() {
+	__ipset add "xge_${1}" $2
+}
+
+__channel_add() {
+	for channel in $channels_list; do
+		channel_natip="$(__channel_natip $channel)"
+
+		if [[ "$channel_natip" = *-* ]]; then
+			IFS=- read ipmin ipmax <<< "$channel_natip"
+		else
+			ipmin=$channel_natip
+		fi
+		__ip_in_range $1 $ipmin ${ipmax:-} && break
+		channel=''
+	done
+	[ "${channel:-}" = '' ] && echo "channel for $1 not defined" && return 1
+	__channel_ipset_add $channel $1
+}
+
 __snat_tree_add() {
 	__snat_tree_del $1 $2 &>/dev/null
 	[ -z "$2" -o "$2" = '0.0.0.0' ] && return 0
+
+	if [ "${reservation:-0}" = "1" ]; then
+		__channel_add $2
+	fi
 	iptables -t nat -I $(__nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && __session_update $1 snat $2
+}
+
+__channel_ipset_del() {
+	for channel in $channels_list; do
+		__ipset del "xge_${channel}" $1
+	done
 }
 
 __snat_tree_del() {
@@ -514,6 +547,7 @@ __snat_tree_del() {
 		[ -z "$OLD_NUMBER_SNAT" ] && break
 		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/} 2>/dev/null
 	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
+	__channel_ipset_del $1
 	__session_update $1 snat ''
 }
 

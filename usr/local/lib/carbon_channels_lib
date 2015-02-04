@@ -1,0 +1,90 @@
+. /usr/local/bin/app_config.sh 
+
+
+channels_list="$(grep natip /cfg/channel.config | sed -e 's/\..*//g')"
+
+
+channels_chains() {
+	[ "${reservation:-0}" = "1" ] && return 0
+
+	for channel in $channels_list; do
+		iptables -t nat -N xge_channelsRJ
+		iptables -t nat -N "$(__RJ_chain_name $channel)"
+		iptables -t nat -N "$(__SNAT_chain_name $channel)"
+	done
+}
+
+channels_reservation_rules() {
+	[ "${reservation:-0}" != "1" ] && return 0
+
+	for channel in $channels_list; do
+		RJchain="$(__RJ_chain_name $channel)"
+		SNATchain="$(SNAT_chain_name $channel)"
+		reserv_chann__el="$(__channel_reserv $channel)"
+		channel_natip="$(__channel_natip $channel)"
+		channel_ipset_name="$(__ipset_name $channel)"
+
+		iptables -t nat -A xge_channelsRJ -m set --set "$channel_ipset_name" src -j "$RJchain"	
+
+		iptables -t nat -A "$RJchain" -j RETURN
+		iptables -t nat -A "$RJchain" -j "xge_${reserv_channel}SNAT"
+
+		iptables -t nat -A "$SNATchain" -j SNAT --to-source $channel_natip
+	done
+}
+
+channels_ipset() {
+	[ "${reservation:-0}" != "1" ] && return 0
+
+	for channel in $channels_list; do
+		ipset create "$(__ipset_name $channel)" hash:ip family inet hashsize 65536 maxelem 65536
+	done
+}
+
+disable_channel() {
+	local channel=$1
+	RJchain="$(__RJ_chain_name $channel)"
+
+	iptables -t nat -D "$RJchain" -j RETURN
+}
+
+__SNAT_chain_name() {
+	local channel=$1
+	echo "xge_${channel}SNAT"
+}
+
+__RJ_chain_name() {
+	local channel=$1
+	echo "xge_${channel}RJ"
+}
+
+__channel_natip() {
+	local channel=$1
+	eval "echo \$${channel}_natip"
+}
+
+__channel_reserv() {
+	local channel=$1
+	eval "echo \$${channel}_reserv_channel"
+}
+
+__ipset_name() {
+	local channel=$1
+	echo "xge_${channel}"
+}
+
+__string2ip() {
+	IFS=. read a b c d <<< "$1"
+	echo $(( (a<<24) + (b<<16) + (c<<8) + d))
+}
+
+__ip_in_range() {
+	local ip=$1
+	local ipmin=$2
+	local ipmax=$3
+	[ "${ipmax:-}" = '' ] && ipmax=$ipmin
+	ipmax="$(__string2ip $ipmax)"
+	ipmin="$(__string2ip $ipmin)"
+	ip="$(__string2ip $ip)"
+	[ $ip -le $ipmax -a $ip -ge $ipmin ]
+}
