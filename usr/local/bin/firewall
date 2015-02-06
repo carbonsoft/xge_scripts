@@ -294,6 +294,7 @@ start() {
 
 stop() {
 	save
+	__channels_states_clear
 }
 
 restart() {

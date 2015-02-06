@@ -1,4 +1,3 @@
-cat /cfg/config.sh
 #config_file=$1
 #config_cache=${config_file%%.*}
 config_cache=/cfg/config.cache

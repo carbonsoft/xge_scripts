@@ -510,12 +510,8 @@ __channel_ipset_add() {
 __channel_add() {
 	for channel in $channels_list; do
 		channel_natip="$(__channel_natip $channel)"
-
-		if [[ "$channel_natip" = *-* ]]; then
-			IFS=- read ipmin ipmax <<< "$channel_natip"
-		else
-			ipmin=$channel_natip
-		fi
+		ipmin=${channel_natip%%-*}
+		ipmax=${channel_natip##*-}
 		__ip_in_range $1 $ipmin ${ipmax:-} && break
 		channel=''
 	done

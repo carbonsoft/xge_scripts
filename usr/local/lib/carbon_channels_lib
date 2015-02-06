@@ -1,14 +1,18 @@
-. /usr/local/bin/app_config.sh 
+#!/bin/bash
+
+. /usr/local/bin/app_config.sh
 
 
 channels_list="$(grep natip /cfg/channel.config | sed -e 's/\..*//g')"
+state_dir="/var/lib/xge_channels"
+mkdir -p "$state_dir"
 
 
 channels_chains() {
-	[ "${reservation:-0}" = "1" ] && return 0
+	[ "${reservation:-0}" != "1" ] && return 0
 
+	iptables -t nat -N xge_channelsRJ
 	for channel in $channels_list; do
-		iptables -t nat -N xge_channelsRJ
 		iptables -t nat -N "$(__RJ_chain_name $channel)"
 		iptables -t nat -N "$(__SNAT_chain_name $channel)"
 	done
@@ -17,19 +21,18 @@ channels_chains() {
 channels_reservation_rules() {
 	[ "${reservation:-0}" != "1" ] && return 0
 
+	iptables -t nat -A xge_post -j xge_channelsRJ
 	for channel in $channels_list; do
 		RJchain="$(__RJ_chain_name $channel)"
-		SNATchain="$(SNAT_chain_name $channel)"
-		reserv_chann__el="$(__channel_reserv $channel)"
+		SNATchain="$(__SNAT_chain_name $channel)"
+		reserv_channel="$(__channel_reserv $channel)"
 		channel_natip="$(__channel_natip $channel)"
 		channel_ipset_name="$(__ipset_name $channel)"
 
-		iptables -t nat -A xge_channelsRJ -m set --set "$channel_ipset_name" src -j "$RJchain"	
+		iptables -t nat -A xge_channelsRJ -m set --set "$channel_ipset_name" src -j "$RJchain"
+		iptables -t nat -A "$SNATchain" -j SNAT --to-source "$channel_natip"
 
-		iptables -t nat -A "$RJchain" -j RETURN
-		iptables -t nat -A "$RJchain" -j "xge_${reserv_channel}SNAT"
-
-		iptables -t nat -A "$SNATchain" -j SNAT --to-source $channel_natip
+		enable_channel $channel
 	done
 }
 
@@ -41,11 +44,96 @@ channels_ipset() {
 	done
 }
 
-disable_channel() {
+check_and_fix_channel() {
+	[ "${reservation:-0}" != "1" ] && return 0
+	local channel=$1
+	if __check_channel $channel ; then
+		__log channel $channel is ok - enable_channel
+		enable_channel $channel
+	else
+		__log channel $channel is not work - replace_channel
+		replace_channel $channel
+	fi
+}
+
+__check_channel() {
+	#TODO добавить tcpinger
+	local channel=$1
+	channel_natip="$(__channel_natip $channel)"
+	channel_natip=${channel_natip%%-*}
+	[ "${check_ip_addr:-}" = "" ] && check_ip_addr=8.8.8.8
+	ping -q -c 1 -w 1 -I $channel_natip "$check_ip_addr" &>/dev/null
+}
+
+replace_channel() {
+	[ "${reservation:-0}" != "1" ] && return 0
+
+	local channel=$1
+	RJchain="$(__RJ_chain_name $channel)"
+	reserv_channel="$(__channel_reserv $channel)"
+	SNATchain="$(__SNAT_chain_name $reserv_channel)"
+
+	__channel_check_state $channel 1>/dev/null; ret=$?
+	[ "$ret" = "2" ] && return 0
+	iptables -t nat -F "$RJchain"
+	iptables -t nat -A "$RJchain" -j "$SNATchain"
+
+	__channel_set_state $channel replaced
+}
+
+enable_channel() {
+	[ "${reservation:-0}" != "1" ] && return 0
+
 	local channel=$1
 	RJchain="$(__RJ_chain_name $channel)"
 
-	iptables -t nat -D "$RJchain" -j RETURN
+	__channel_check_state $channel 1>/dev/null && return 0
+	iptables -t nat -F "$RJchain"
+	iptables -t nat -A "$RJchain" -j RETURN
+
+	__channel_set_state $channel enabled
+}
+
+__log() {
+	echo $(date '+%Y-%m-%d %H:%M:%S') ${HOSTNAME}[$$]: "$@"
+}
+
+#__channel_check_state $channel
+# retvals:
+#	0 - enabled
+#	2 - replaced
+#	255 - unknown
+
+__channel_check_state() {
+	local channel=$1
+	local state
+	[ ! -f "${state_dir}/${channel}" ] && return 255
+	read state t < "${state_dir}/${channel}"
+	echo $state
+	case $state in
+		enabled)
+			return 0
+			;;
+		replaced)
+			return 2
+			;;
+		*)
+			return 255
+			;;
+	esac
+}
+
+# grep -v 'enabled' /var/lib/xge_channels/*
+__channel_set_state() {
+	local channel=$1
+	shift
+	local state="$@"
+
+	echo $state > "${state_dir}/${channel}"
+}
+
+__channels_states_clear() {
+	rm -rf ${state_dir}/*
 }
 
 __SNAT_chain_name() {
