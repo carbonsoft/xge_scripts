@@ -14,3 +14,4 @@ HOME=/
 # |  |  |  |  |
 # *  *  *  *  * user-name command to be executed
 */1  *  *  *  * root	  /usr/local/bin/firewall save &>> /var/log/xge/firewall_save.log
+*/5  *  *  *  * root	  /usr/local/bin/snat_replacer.sh $>> /var/log/xge/snat_replacer.log
