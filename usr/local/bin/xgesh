@@ -94,6 +94,42 @@ __session_id_unlock() {
 	rm -f $session_lock
 }
 
+__global_access_check() {
+	! iptables -nvL xge_forward | grep "global access allow"
+	[ "$?" != "0" ] && echo -e "Внимание!! Доступ в интернет разрешен всем!!\nДля отключения xgesh global access allow cancel"
+}
+
+__global_access() {
+	if [ "$1" = "allow" -a "$2" = "cancel" ]; then
+		iptables -D xge_forward -m comment --comment "global access allow" -j ACCEPT &>/dev/null
+		return $?
+	fi
+	if [ "$1" = "allow" -a "${2:-}" = "" ]; then
+		iptables -I xge_forward 2 -m comment --comment "global access allow" -j ACCEPT
+		ret=$?
+		[ "$ret" = "0" ] && echo "global access! use to deney: xgesh global access allow cancel"
+		return $ret
+	fi
+	if [ "$1" = "check" ]; then
+		__global_access_check
+		return $?
+	fi
+	echo bad subcommand: $cmd $global_cmd "$@"
+}
+
+global() {
+	case "$1" in
+	access)
+		global_cmd=$1
+		shift
+		__global_$global_cmd "$@"
+		;;
+	*)
+		echo "bad subcommand: $cmd $@"
+		;;
+	esac
+}
+
 __session_list() {
 	ls /var/lib/xge_sessions/
 }
@@ -599,6 +635,13 @@ help() {
 	echo '       where  OBJECT := { session | mac }'
 	echo '	       and  COMMANDS := {'
 #TODO remove mac to session?
+	echo '		    # global'
+	echo '			# allow all abonents'
+	echo '			    access allow'
+	echo '			# check for allow rule'
+	echo '			    access allow check'
+	echo '			# remove allow rule'
+	echo '			    access allow cancel'
 	echo '		    # mac'
 	echo '		    	# set mac binding:'
 	echo '			    xgesh mac set <abonent ip> <MAC>'
@@ -655,7 +698,7 @@ cmd() {
 	help | show )
 		$cmd $@
 		;;
-	session | mac)
+	session | mac | global)
 		exec 22>$session_lock
 		__session_id_lock
 		$cmd $@
