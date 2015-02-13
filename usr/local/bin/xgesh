@@ -201,12 +201,12 @@ __session_disconnect() {
 	local session_id=$1
 	echo ${FUNCNAME//_/ } $@
 	if accel-cmd terminate ip $session_id; then
-		__session_stop $session_id
+		# __session_stop $session_id
 		__session_update $session_id terminate_cause 'CoA-Disconnect'
 	fi
 
 	if [ "$(__session_var_get $1 type)" = 'IPOE' ]; then
-		__session_stop $session_id
+		# __session_stop $session_id
 		__session_update $session_id terminate_cause 'CoA-Disconnect'
 	fi
 }

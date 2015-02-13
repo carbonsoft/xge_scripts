@@ -3,4 +3,4 @@
 [ ! -d /var/log/xge/ ] && mkdir /var/log/xge/
 echo >> /var/log/xge/sessions.log
 echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: ip-down $@" >> /var/log/xge/sessions.log
-xgesh session $5 stop $ACCT_TERMINATE_CAUSE 2>&1
+# xgesh session $5 stop $ACCT_TERMINATE_CAUSE 2>&1
