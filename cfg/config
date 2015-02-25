@@ -22,6 +22,8 @@ declare -A vpn
 vpn['widget']='menu "Настройки VPN сервера" ""'
 vpn['enabled']='1'
 vpn['enabled.widget']='checkbox "Включить VPN-сервер" ""'
+vpn['pptp.allow_external']='0'
+vpn['pptp.allow_external.widget']='checkbox "Разрешить PPTP подключения со всех сетей" ""'
 vpn['pptp.enabled']='1'
 vpn['pptp.enabled.widget']='checkbox "Включить поддержку PPTP" ""'
 vpn['pppoe.enabled']='1'
@@ -38,19 +40,9 @@ vpn['auth.mschap2']='1'
 vpn['auth.mschap2.widget']='checkbox "Включить MS-CHAP v2" ""'
 
 declare -A httpd
-httpd['internal_ip']='169.0.80.90'
-httpd['internal_page']='http://169.0.80.90/index.html'
-# httpd['internal_page.widget']='inputbox "Главная страница внутреннего веб-сервера XGE" ""'
-httpd['redirect_ip']='169.0.80.91'
-httpd['redirect_page']='http://169.0.80.91/redirect.html'
-# httpd['redirect_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
-httpd['redirect_noauth_ip']='169.0.80.92'
-httpd['redirect_noauth_page']='http://169.0.80.92/noauth.php'
-# httpd['redirect_noauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
-httpd['redirect_webauth_ip']='169.0.80.93'
-httpd['redirect_webauth_page']='http://169.0.80.93/webauth.html'
-# httpd['redirect_webauth_page.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
+httpd['widget']='menu "Настройки встроенного редиректа"'
 
+httpd['internal_ip']='169.0.80.90'
 httpd['redirect_negbal_url']='http://169.1.0.80/html/negbal.php'
 httpd['redirect_negbal_url.widget']='inputbox "Страница редиректа отрицательного баланса" ""'
 httpd['redirect_blocked_url']='http://169.1.0.80/html/blocked.php'
@@ -58,7 +50,13 @@ httpd['redirect_blocked_url.widget']='inputbox "Страница редирек�
 httpd['redirect_noauth_url']='http://169.1.0.80/html/noauth.php'
 httpd['redirect_noauth_url.widget']='inputbox "Страница редиректа не авторизованных абонентов" ""'
 
+httpd['redirect_webauth.enabled']='0'
+httpd['redirect_webauth.enabled.widget']='checkbox "Включить веб-авторизацию" ""'
+httpd['redirect_webauth_url']='http://169.0.80.90/html/webauth.php'
+httpd['redirect_webauth_url.widget']='inputbox "Страница редиректа веб-авторизации" ""'
+
 declare -A firewall
+firewall['widget']='menu "Настройки файрвола"'
 firewall['enabled']='1'
 firewall['enabled.widget']='checkbox "Включить файрвол" ""'
 firewall['new_limit_l']='2000'
@@ -66,9 +64,10 @@ firewall['new_limit_l.widget']='inputbox "Ограничить колво нов
 firewall['new_limit_e']='2000'
 firewall['new_limit_e.widget']='inputbox "Ограничить колво новых соед/сек из Интернет" "Рекомендуется 500-1000"'
 firewall['billing_ip']='169.1.0.80'
-firewall['billing_ip.widget']='inpubox "IP адрес для перенаправления" "Обычно IP биллинга"'
+firewall['billing_ip.widget']='inputbox "IP адрес для перенаправления" "Обычно IP биллинга"'
 
 declare -A qos
+qos['widget']='menu "Настройки канала"'
 qos['root_rate']='850000'
 qos['root_rate.widget']='inputbox "Суммараная ширина каналов kbit" ""'
 qos['reserved']=''
@@ -96,7 +95,7 @@ nfusens['widget']='menu "Настройки сенсора netflow" ""'
 nfusens['enabled.widget']='checkbox "Включить nfusens" "Без него XGE-Router не будет корректно работать"'
 nfusens['enabled']='1'
 nfusens['collector']='169.1.99.96:9996'
-nfusens['collector.widget']='inputbox "Сервер сборки статистики" "Адрес netflow-коллектора: IP:PORT"'
+nfusens['collector.widget']='inputbox "Сервер сбора статистики" "Адрес netflow-коллектора: IP:PORT"'
 
 declare -A radclient
 radclient['widget']='menu "Настройки Radius" "Настройки подключения к биллингу (АСР / ААА-серверу)"'
@@ -119,12 +118,12 @@ radclient['nas_identifier.widget']='inputbox "IP адрес этого NAS-се�
 
 declare -A networks
 networks['widget']='menu "Списки подсетей"'
-networks['trusted_list']=''
-networks['trusted_list.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
+networks['trust_blocked_list']=''
+networks['trust_blocked_list.widget']='inputbox "Список подсетей доступных всегда и всем, в т.ч. не авторизованным и заблокированным" "Задавать через пробел"'
+networks['trust_negbal_list']=''
+networks['trust_negbal_list.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
+networks['local_net.widget']='inputbox "Список всех абонентских и всех служебных сетей" "Задавать через пробел"'
 networks['local_net']='192.168.0.0/16 172.16.0.0/12 10.0.0.0/8'
-networks['local_net.widget']='inputbox "Список локальных сетей, которые доступны без ната" "Задавать через пробел"'
-networks['allow_list']=''
-networks['allow_list.widget']='inputbox "Список подсетей доступных всегда и всем, в т.ч. не авторизованным и заблокированным" "Задавать через пробел"'
 
 declare -A ctl
 ctl['start']='/service start'
@@ -132,5 +131,10 @@ ctl['stop']='/service stop'
 ctl['status']='/service status'
 
 declare -A mount
-mount['proc']='-t proc none /app/xge/proc'
-mount['dev']='-t devtmpfs none /app/xge/dev'
+mount['proc']='-t proc none /proc'
+mount['dev']='-t devtmpfs none /dev'
+
+declare -A named
+named['widget']='menu "Настройки DNS сервера"'
+named['enabled']='1'
+named['enabled.widget']='checkbox "Включить DNS сервер" ""'

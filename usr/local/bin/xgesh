@@ -2,6 +2,9 @@
 PS4='+ ${BASH_SOURCE##*/}($LINENO): ${FUNCNAME:-}: '
 export PATH="$PATH:/usr/sbin/:/sbin/:/usr/local/sbin/:/usr/local/bin/"
 
+. /usr/local/bin/app_config.sh
+. /usr/local/lib/carbon_channels_lib
+
 #set -eux
 #TODO: transparent ipset
 #TODO: transparent iptables
@@ -89,6 +92,42 @@ __session_id_lock() {
 __session_id_unlock() {
 	flock -u 22
 	rm -f $session_lock
+}
+
+__global_access_check() {
+	! iptables -nvL xge_forward | grep "global access allow"
+	[ "$?" != "0" ] && echo -e "Внимание!! Доступ в интернет разрешен всем!!\nДля отключения xgesh global access allow cancel"
+}
+
+__global_access() {
+	if [ "$1" = "allow" -a "$2" = "cancel" ]; then
+		iptables -D xge_forward -m comment --comment "global access allow" -j ACCEPT &>/dev/null
+		return $?
+	fi
+	if [ "$1" = "allow" -a "${2:-}" = "" ]; then
+		iptables -I xge_forward 2 -m comment --comment "global access allow" -j ACCEPT
+		ret=$?
+		[ "$ret" = "0" ] && echo "global access! use to deney: xgesh global access allow cancel"
+		return $ret
+	fi
+	if [ "$1" = "check" ]; then
+		__global_access_check
+		return $?
+	fi
+	echo bad subcommand: $cmd $global_cmd "$@"
+}
+
+global() {
+	case "$1" in
+	access)
+		global_cmd=$1
+		shift
+		__global_$global_cmd "$@"
+		;;
+	*)
+		echo "bad subcommand: $cmd $@"
+		;;
+	esac
 }
 
 __session_list() {
@@ -198,12 +237,12 @@ __session_disconnect() {
 	local session_id=$1
 	echo ${FUNCNAME//_/ } $@
 	if accel-cmd terminate ip $session_id; then
-		__session_stop $session_id
+		# __session_stop $session_id
 		__session_update $session_id terminate_cause 'CoA-Disconnect'
 	fi
 
 	if [ "$(__session_var_get $1 type)" = 'IPOE' ]; then
-		__session_stop $session_id
+		# __session_stop $session_id
 		__session_update $session_id terminate_cause 'CoA-Disconnect'
 	fi
 }
@@ -241,7 +280,11 @@ __session_remove() {
 }
 
 __session_test() {
-	session_test.sh $1
+        if [ "$2" == "human" ]; then
+                /usr/local/bin/session_test_human $1
+        else
+                session_test.sh $1
+        fi
 }
 
 __session_exist(){
@@ -496,10 +539,36 @@ __snat_cache_refresh() {
 	fi
 }
 
+__channel_ipset_add() {
+	__ipset add "xge_${1}" $2
+}
+
+__channel_add() {
+	for channel in $channels_list; do
+		channel_natip="$(__channel_natip $channel)"
+		ipmin=${channel_natip%%-*}
+		ipmax=${channel_natip##*-}
+		__ip_in_range $1 $ipmin ${ipmax:-} && break
+		channel=''
+	done
+	[ "${channel:-}" = '' ] && echo "channel for $1 not defined" && return 1
+	__channel_ipset_add $channel $1
+}
+
 __snat_tree_add() {
 	__snat_tree_del $1 $2 &>/dev/null
 	[ -z "$2" -o "$2" = '0.0.0.0' ] && return 0
+
+	if [ "${reservation:-0}" = "1" ]; then
+		__channel_add $2
+	fi
 	iptables -t nat -I $(__nat_chain_eval $1) -s $1 -j SNAT --to-source $2 && __session_update $1 snat $2
+}
+
+__channel_ipset_del() {
+	for channel in $channels_list; do
+		__ipset del "xge_${channel}" $1
+	done
 }
 
 __snat_tree_del() {
@@ -510,6 +579,7 @@ __snat_tree_del() {
 		[ -z "$OLD_NUMBER_SNAT" ] && break
 		iptables -t nat -D $NAT_CHAIN -s $1 -j SNAT --to-source ${to//to:/} 2>/dev/null
 	done <<< "$(fgrep $1 $TAB_FILE.SNAT)"
+	__channel_ipset_del $1
 	__session_update $1 snat ''
 }
 
@@ -565,6 +635,13 @@ help() {
 	echo '       where  OBJECT := { session | mac }'
 	echo '	       and  COMMANDS := {'
 #TODO remove mac to session?
+	echo '		    # global'
+	echo '			# allow all abonents'
+	echo '			    access allow'
+	echo '			# check for allow rule'
+	echo '			    access allow check'
+	echo '			# remove allow rule'
+	echo '			    access allow cancel'
 	echo '		    # mac'
 	echo '		    	# set mac binding:'
 	echo '			    xgesh mac set <abonent ip> <MAC>'
@@ -621,7 +698,7 @@ cmd() {
 	help | show )
 		$cmd $@
 		;;
-	session | mac)
+	session | mac | global)
 		exec 22>$session_lock
 		__session_id_lock
 		$cmd $@

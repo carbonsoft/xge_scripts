@@ -12,7 +12,7 @@ fi
 H=$((H-R))
 
 # pfifo меньше грузит чем pfifo_fast
-ip a| grep ': eth' |cut -d ':' -f 2 | while read dev; do tc qdisc del dev "$dev" root; tc qdisc add dev "$dev" root pfifo; done
+ip a| grep ': eth' |cut -d ':' -f 2 | cut -d "@" -f 1 | while read dev; do tc qdisc del dev "$dev" root; tc qdisc add dev "$dev" root pfifo; done
 
 ip link set dev imq0 down
 ip link set dev imq1 down
