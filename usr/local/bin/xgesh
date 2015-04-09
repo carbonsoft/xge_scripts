@@ -101,18 +101,20 @@ __global_access_check() {
 
 __global_access() {
 	if [ "$1" = "allow" -a "$2" = "cancel" ]; then
-		iptables -D xge_forward -m comment --comment "global access allow" -j ACCEPT &>/dev/null
-		return $?
+		iptables -D xge_forward -m comment --comment "global access allow foward" -j ACCEPT &>/dev/null
+		iptables -D xge_pre -m comment --comment "global access allow prerouting" -j RETURN &>/dev/null
+		return
 	fi
 	if [ "$1" = "allow" -a "${2:-}" = "" ]; then
-		iptables -I xge_forward 2 -m comment --comment "global access allow" -j ACCEPT
+		iptables -I xge_forward 2 -m comment --comment "global access allow forward" -j ACCEPT
+		iptables -I xge_pre -m comment --comment "global access allow prerouting" -j RETURN
 		ret=$?
 		[ "$ret" = "0" ] && echo "global access! use to deney: xgesh global access allow cancel"
 		return $ret
 	fi
 	if [ "$1" = "check" ]; then
 		__global_access_check
-		return $?
+		return
 	fi
 	echo bad subcommand: $cmd $global_cmd "$@"
 }

@@ -60,7 +60,7 @@ session_ping() {
 session_arp() {
     local session=$1
     echo -n "User arp record:"
-    ip neig show | grep $session
+    ip neig show | grep -wm1 "$session"
 }
 
 session_tcpdump() {
