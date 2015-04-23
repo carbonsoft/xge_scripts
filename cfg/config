@@ -38,6 +38,10 @@ vpn['auth.mschap1']='1'
 vpn['auth.mschap1.widget']='checkbox "Включить MS-CHAP v1" ""'
 vpn['auth.mschap2']='1'
 vpn['auth.mschap2.widget']='checkbox "Включить MS-CHAP v2" ""'
+vpn['dns1.widget']='inputbox "DNS1 для абонентов" "DNS сервер, который будет отдаваться абонентам при vpn авторизации"'
+vpn['dns1']='10.128.0.1'
+vpn['dns2.widget']='inputbox "DNS2 для абонентов" "DNS сервер, который будет отдаваться абонентам при vpn авторизации"'
+vpn['dns2']='8.8.8.8'
 
 declare -A httpd
 httpd['widget']='menu "Настройки встроенного редиректа"'
@@ -52,7 +56,7 @@ httpd['redirect_noauth_url.widget']='inputbox "Страница редирект
 
 httpd['redirect_webauth.enabled']='0'
 httpd['redirect_webauth.enabled.widget']='checkbox "Включить веб-авторизацию" ""'
-httpd['redirect_webauth_url']='http://169.0.80.90/html/webauth.php'
+httpd['redirect_webauth_url']='http://169.0.80.90:446/html/webauth.php'
 httpd['redirect_webauth_url.widget']='inputbox "Страница редиректа веб-авторизации" ""'
 
 declare -A firewall

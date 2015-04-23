@@ -107,6 +107,8 @@ gen_accel_pppd_config() {
 	nas_identifier="${radclient[nas_identifier]:-$first_ip}"
 	ppp_server_ip=${app['ppp-server.ip']}
 	interface="$(get_pppoe_interfaces)"
+	dns1="${vpn['dns1']:-$ppp_server_ip}"
+	dns2="${vpn['dns2']:-8.8.8.8}"
 
 	for ip in ${app['ppp-server.ip']}/32 $nas_identifier/8; do
 		if ! ip -4 a | egrep -q " ${ip%/*}/[0-9][0-9]*"; then

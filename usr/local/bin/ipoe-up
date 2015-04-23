@@ -9,18 +9,21 @@ FRAMED_IP_ADDRESS="$(grep ^Framed-IP-Address $AUTHFILE | cut -d ' ' -f2)"
 CTRL_TYPE="IPOE"
 
 echo >> $LOGFILE
-echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: ip-up $@" >> $LOGFILE
+echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - ip-up $@" >> $LOGFILE
+
+
+echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh session $FRAMED_IP_ADDRESS start $CTRL_TYPE $@" >> $LOGFILE
+xgesh session $FRAMED_IP_ADDRESS start $CTRL_TYPE
 
 while read cmd data; do
 	if [ "$cmd" = 'Filter-Id' ]; then
 		PARAMS="$data"
 		PARAMS=${PARAMS//Framed-IP-Address/$FRAMED_IP_ADDRESS}
 		if out=$(xgesh $PARAMS 2>&1); then
-			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh ${out//$n/ >>} [   OK   ]"
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh $PARAMS [   OK   ]"
 		else
-			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh ${out//$n/ >>} [ FAILED ]"
+			echo "$(date +"%Y-%m-%d %H:%M:%S") $HOSTNAME ${0##*/}[$$]: - xgesh $PARAMS [ FAILED ]"
+			echo ${out//$n/ >>}
 		fi
 	fi
 done < $AUTHFILE >> $LOGFILE
-
-xgesh session $1 start $CTRL_TYPE

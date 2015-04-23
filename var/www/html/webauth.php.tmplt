@@ -1,25 +1,4 @@
 <?php
-$password=$_POST['password'];
-$username=$_POST['username'];
-
-$auth_type='mschapv2';
-$server="@@@server%%%";
-$port="@@@auth_port%%%";
-$secret="@@@secret%%%";
-$challenge = mt_rand();
-$ident = 1;
-$cp = md5(pack('Ca*', $ident, $password.$challenge), true);
-$radh = radius_auth_open();
-$debug = true;
-radius_add_server($radh, $server, $port, $secret, 3, 3);
-radius_create_request($radh, RADIUS_ACCESS_REQUEST);
-radius_put_string($radh, RADIUS_USER_NAME, $username);
-radius_put_string($radh, RADIUS_NAS_IDENTIFIER, 'Carbon_XGE');
-
-//NAS-Ip-Address
-radius_put_int($radh, RADIUS_SERVICE_TYPE, RADIUS_FRAMED);
-//radius_put_string($radh, RADIUS_CALLING_STATION_ID, '10.90.1.140');
-///radius_put_addr($radh, RADIUS_NAS_IP, '10.90.140.11');
 
 /* DEC PHP BEGIN */
 function des_encrypt_ecb($key, $clearText) {
@@ -366,22 +345,6 @@ function print_footer() {
     echo("</pre></body></html>\n");
 }
 
-//osv print_header();
-
-$authChallenge = GenerateChallenge(16);
-
-if (!radius_put_vendor_attr($radh, RADIUS_VENDOR_MICROSOFT, RADIUS_MICROSOFT_MS_CHAP_CHALLENGE, $authChallenge)) {
-    exit;
-}
-
-$peerChallenge = GeneratePeerChallenge();
-$ntresp = GenerateNTResponse($authChallenge, $peerChallenge, $username, $password);
-$reserved = str_repeat ("\0", 8);
-$resp = pack('CCa16a8a24',1 , 1, $peerChallenge, $reserved, $ntresp);
-
-if (!radius_put_vendor_attr($radh, RADIUS_VENDOR_MICROSOFT, RADIUS_MICROSOFT_MS_CHAP2_RESPONSE, $resp)) {
-    exit;
-}
 
 function export_radius_framed_ip_addr($resa) {
     if (!is_array($resa))
@@ -494,6 +457,7 @@ function print_warning() {
 
 //TODO: сделать прозрачный проброс сообщений из биллинга пользователю, например Error-Cause.
 function show_error($radh, $error) {
+    print_header();
     switch ($error) { 
     case RADIUS_ACCESS_REJECT:
         print_warning();
@@ -501,7 +465,6 @@ function show_error($radh, $error) {
         print_radattrs($radh);
         break;
     case RADIUS_ACCESS_CHALLENGE:
-        print_header;
         printf("XGE auth: RADIUS_ACCESS_CHALLENGE\n");
         break;
     case RADIUS_ACCESS_ACCEPT:
@@ -512,15 +475,16 @@ function show_error($radh, $error) {
         if ($_SESSION[$ban_key]==''){
                 $_SESSION[$ban_key]=0;
         }
-        if ((($_SESSION[$ban_key]+10)<time()) and $_SERVER['HTTP_HOST'] != '169.0.80.92'){
+
+        if ( (($_SESSION[$ban_key]+10)<time()) and $_SERVER['HTTP_HOST'] != '169.0.80.90' ){
             header( 'Location: '.$_POST['orig_url'], true, 302 );
             $_SESSION[$ban_key]=time();
             
         } else {
             $_SESSION[$ban_key]=0;
         }
-        printf("XGE auth: авторизация прошла успешно нажмите ссылку");
-        print_warning();
+        printf("XGE auth: авторизация прошла успешно нажмите ссылку, если вас не перенаправило на исходную страницу");
+        echo ( '</pre> <a href="'.$_POST['orig_url'].'">'.$_POST['orig_url'].'</a><pre>');
         exit;
         break;
     default:
@@ -528,6 +492,49 @@ function show_error($radh, $error) {
         echo("XGE auth: Неизвестная ошибка авторизации XGE err=".$error." , возможно RADIUS сервер не отвечает\n");
         break;
     }
+}
+
+
+$password=$_POST['password'];
+$username=$_POST['username'];
+if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+    $user_ip = $_SERVER['HTTP_CLIENT_IP'];
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $user_ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+} else {
+    $user_ip = $_SERVER['REMOTE_ADDR'];
+}
+
+$auth_type='mschapv2';
+$server="@@@server%%%";
+$port="@@@auth_port%%%";
+$secret="@@@secret%%%";
+$challenge = mt_rand();
+$ident = 1;
+$cp = md5(pack('Ca*', $ident, $password.$challenge), true);
+$debug = true;
+
+$radh = radius_auth_open();
+radius_add_server($radh, $server, $port, $secret, 3, 3);
+radius_create_request($radh, RADIUS_ACCESS_REQUEST);
+radius_put_string($radh, RADIUS_USER_NAME, $username);
+radius_put_addr($radh, RADIUS_FRAMED_IP_ADDRESS, $user_ip);
+radius_put_string($radh, RADIUS_NAS_IDENTIFIER, 'Carbon_XGE');
+radius_put_int($radh, RADIUS_SERVICE_TYPE, RADIUS_FRAMED);
+
+$authChallenge = GenerateChallenge(16);
+
+if (!radius_put_vendor_attr($radh, RADIUS_VENDOR_MICROSOFT, RADIUS_MICROSOFT_MS_CHAP_CHALLENGE, $authChallenge)) {
+    exit;
+}
+
+$peerChallenge = GeneratePeerChallenge();
+$ntresp = GenerateNTResponse($authChallenge, $peerChallenge, $username, $password);
+$reserved = str_repeat ("\0", 8);
+$resp = pack('CCa16a8a24',1 , 1, $peerChallenge, $reserved, $ntresp);
+
+if (!radius_put_vendor_attr($radh, RADIUS_VENDOR_MICROSOFT, RADIUS_MICROSOFT_MS_CHAP2_RESPONSE, $resp)) {
+    exit;
 }
 
 $error = radius_send_request($radh);
