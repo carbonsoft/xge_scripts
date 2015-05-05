@@ -179,6 +179,7 @@ __session_redirect(){
 ## xgesh session $ip remove
 ## xgesh session $ip info
 ## xgesh session $ip test
+## xgesh session $ip get_mac
 session(){
 	if [[ " dump list " == *" $1 "* ]]; then
 		session_cmd="$1"
@@ -186,7 +187,7 @@ session(){
 		return $?
 	fi
 	case "$2" in
-	info | disconnect | start | stop | test | remove | forward | redirect | nat | rate)
+	info | disconnect | start | stop | test | remove | forward | redirect | nat | rate | get_mac)
 		session_id="$1"
 		shift
 
@@ -287,6 +288,10 @@ __session_test() {
         else
                 session_test.sh $1
         fi
+}
+
+__session_get_mac() {
+	/usr/local/bin/session_get_mac $1
 }
 
 __session_exist(){
@@ -680,6 +685,8 @@ help() {
 	echo '                      session <session_id> disconnect'
 	echo '			#remove session from nas'
 	echo '                      session <session_id> remove'
+	echo '			#get session mac '
+	echo '                      session <session_id> get_mac'
 
 
 }
@@ -733,3 +740,4 @@ main(){
 }
 
 main $@
+
