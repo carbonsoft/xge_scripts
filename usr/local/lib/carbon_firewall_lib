@@ -1,6 +1,7 @@
 #!/bin/bash
 
-IPSET_SAVE_FILE=/var/lib/xge_ipset.save
+. /usr/local/lib/carbon_ipset_lib
+
 SNAT_SAVE_FILE=/var/lib/xge_firewall_snat.save
 SNAT_TMPFILE=/tmp/firewall/xge_firewall_snat.$$
 
@@ -84,50 +85,6 @@ iptables_cleanup() {
 		remove_links $table
 		delete_chains $table
 	done
-}
-
-flush_ipset() {
-	ipset flush
-}
-
-destroy_ipset() {
-	while read tmp set tmp; do
-		ipset destroy $set
-	done <<< "$(ipset -o save list | grep "^create.*")"
-}
-
-ipset_cleanup() {
-	flush_ipset
-	destroy_ipset
-}
-
-ipset_save() {
-	[ ! -d /tmp/firewall/ ] && mkdir -p /tmp/firewall/
-	if ipset -o save -l > $IPSET_SAVE_FILE.$$; then
-		mv -f $IPSET_SAVE_FILE.$$ $IPSET_SAVE_FILE
-	else
-		return 1
-	fi
-}
-
-ipset_restore() {
-	[ ! -s $IPSET_SAVE_FILE ] && return 1
-	cp -f $IPSET_SAVE_FILE /tmp/firewall/ipset.tmp.$$
-	grep '^create' $IPSET_SAVE_FILE > /tmp/firewall/ipset_create.tmp.$$
-
-	while read t list t; do
-		# ipset destroy $list &>/dev/null && continue
-		ipset destroy $list 2>/tmp/firewall/ipset_destroy.out.$$ && continue
-		fgrep -q 'does not exist'  /tmp/firewall/ipset_destroy.out.$$ && continue
-		ipset flush $list &>/dev/null
-		grep -v "^create $list" /tmp/firewall/ipset.tmp.$$ > /tmp/firewall/ipset2.tmp.$$
-		mv -f /tmp/firewall/ipset2.tmp.$$ /tmp/firewall/ipset.tmp.$$
-	done < /tmp/firewall/ipset_create.tmp.$$
-
-	if ! ipset restore < /tmp/firewall/ipset.tmp.$$; then
-		ipset restore < $IPSET_SAVE_FILE
-		echo 'TODO: восстанавливаться из сессий если не получилось с первого раза'
-	fi
 }
 
 iptables_snat_save() {
