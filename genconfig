@@ -111,7 +111,7 @@ gen_accel_pppd_config() {
 	dns2="${vpn['dns2']:-8.8.8.8}"
 
 	for ip in ${app['ppp-server.ip']}/32 $nas_identifier/8; do
-		if ! ip -4 a | egrep -q " ${ip%/*}/[0-9][0-9]*"; then
+		if ! ip -o -4 a | egrep -q " ${ip%/*}/[0-9][0-9]*"; then
 			ip addr add $ip dev dummy0
 		fi
 	done &>/dev/null
