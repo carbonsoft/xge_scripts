@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. /usr/local/lib/carbon_ipset_lib
-
 SNAT_SAVE_FILE=/var/lib/xge_firewall_snat.save
 SNAT_TMPFILE=/tmp/firewall/xge_firewall_snat.$$
 
@@ -112,7 +110,7 @@ firewall_clear() {
 	mkdir -p /var/log/xge /tmp/firewall /var/lock
 	$shaper
 	iptables_cleanup
-	ipset_cleanup
+	/usr/local/bin/carbon_ipset cleanup
 }
 
 tc_restore() {
@@ -126,13 +124,13 @@ tc_save() {
 
 save() {
 	tc_save
-	ipset_save
+	/usr/local/bin/carbon_ipset save
 	iptables_snat_save
 }
 
 restore() {
 	#TODO: сверка с сессиями
-	ipset_restore
+	/usr/local/bin/carbon_ipset restore
 	iptables_snat_restore
 	tc_restore
 }
