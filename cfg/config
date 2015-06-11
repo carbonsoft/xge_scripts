@@ -142,3 +142,12 @@ declare -A named
 named['widget']='menu "Настройки DNS сервера"'
 named['enabled']='1'
 named['enabled.widget']='checkbox "Включить DNS сервер" ""'
+
+declare -A dhcrelay
+dhcrelay['widget']='menu "Настройки DHCP-RELAY"'
+dhcrelay['enabled']='0'
+dhcrelay['enabled.widget']='checkbox "Включить DHCP-RELAY"'
+dhcrelay['dhcp_server_ip']='192.168.122.1'
+dhcrelay['dhcp_server_ip.widget']='inputbox "IPV4 Адрес DHCP сервера" ""'
+dhcrelay['listen_int']='eth0'
+dhcrelay['listen_int.widget']='inputbox "Список интерфейсов, на которых будет слушать DHCP-RELAY" ""'
