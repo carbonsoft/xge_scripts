@@ -1,0 +1,6 @@
+# Command line options here
+DHCRELAYARGS=""
+# DHCPv4 only
+INTERFACES="@@@listen_int%%%"
+# DHCPv4 only
+DHCPSERVERS="@@@dhcp_server_ip%%%"
