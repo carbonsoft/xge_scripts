@@ -10,3 +10,4 @@ zebra
 ospfd
 bgpd
 ripd
+dhcrelay
