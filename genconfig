@@ -189,12 +189,23 @@ gen_named_conf() {
 	genconfig
 }
 
+gen_dhcrelay_conf() {
+	tmpltfile=/skelet/etc/sysconfig/dhcrelay.tmplt
+	conffile=/etc/sysconfig/dhcrelay
+
+	dhcp_server_ip="${dhcrelay['dhcp_server_ip']}"
+	listen_int="${dhcrelay['listen_int']}"
+
+	genconfig
+}
+
 main() {
 	gen_httpd_config
 	gen_accel_pppd_config
 	gen_radius_config
 	gen_hosts_file
 	gen_named_conf
+	gen_dhcrelay_conf
 }
 
 main $@
