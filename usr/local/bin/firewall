@@ -75,7 +75,7 @@ xge_nat() {
 
 # стандартные ipset'ы разрешить/запретить инет
 xge_ipset() {
-	ipset create xge_auth_list hash:ip family inet hashsize 65536 maxelem 65536
+	ipset create xge_auth_list hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_negbal_list hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_blocked_list hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_local_net hash:net family inet hashsize 65536 maxelem 65536
