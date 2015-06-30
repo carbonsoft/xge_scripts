@@ -65,7 +65,7 @@ xge_nat() {
 	iptables -t nat -A xge_post -j xge_user2snat
 
 	if [ "${app['default_snat_enabled']}" = '1' ]; then
-		iptables -t nat -A xge_post -m addrtype ! --dst-type LOCAL -m set --set xge_local_net src -m set ! --set xge_local_net dst -j MASQUERADE
+		iptables -t nat -A xge_post -m addrtype ! --dst-type LOCAL -m set --set xge_gray_net src -m set ! --set xge_gray_net dst -j MASQUERADE
 	fi
 
 	# final link
@@ -79,6 +79,7 @@ xge_ipset() {
 	ipset create xge_negbal_list hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_blocked_list hash:ip family inet hashsize 65536 maxelem 65536
 	ipset create xge_local_net hash:net family inet hashsize 65536 maxelem 65536
+	ipset create xge_gray_net hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_trust_blocked_list hash:net family inet hashsize 65536 maxelem 65536
 	ipset create xge_trust_negbal_list hash:net family inet hashsize 65536 maxelem 65536
 
@@ -104,6 +105,12 @@ xge_ipset_load() {
 	[ -z "${networks['local_net']:-}" ] && networks['local_net']="192.168.0.0/16 172.16.0.0/12 10.0.0.0/8"
 	for net in ${networks['local_net']}; do
 		ipset add xge_local_net $net
+	done
+
+	ipset flush xge_gray_net
+	[ -z "${networks['gray_net']:-}" ] && networks['gray_net']="192.168.0.0/16 172.16.0.0/12 10.0.0.0/8"
+	for net in ${networks['gray_net']}; do
+		ipset add xge_gray_net $net
 	done
 }
 

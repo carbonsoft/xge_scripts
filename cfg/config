@@ -126,8 +126,10 @@ networks['trust_blocked_list']=''
 networks['trust_blocked_list.widget']='inputbox "Список подсетей доступных всегда и всем, в т.ч. не авторизованным и заблокированным" "Задавать через пробел"'
 networks['trust_negbal_list']=''
 networks['trust_negbal_list.widget']='inputbox "Список подсетей доступных при отрицательном балансе" "Задавать через пробел"'
-networks['local_net.widget']='inputbox "Список всех абонентских и всех служебных сетей" "Задавать через пробел"'
+networks['local_net.widget']='inputbox "Список ВСЕХ абонентских и всех служебных сетей" "Задавать через пробел"'
 networks['local_net']='192.168.0.0/16 172.16.0.0/12 10.0.0.0/8'
+networks['gray_net.widget']='inputbox "Список серых абонентских, требуется для правильного маскарада" "Задавать через пробел"'
+networks['gray_net']='192.168.0.0/16 172.16.0.0/12 10.0.0.0/8'
 
 declare -A ctl
 ctl['start']='/service start'
