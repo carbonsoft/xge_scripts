@@ -1,7 +1,7 @@
 #!/bin/bash
 
 check() {
-        . /app/xge/cfg/config
+        . /cfg/config
 	check_netstat "${radclient['nas_identifier']}:${radclient['coa_server.port']}"
 }
 
